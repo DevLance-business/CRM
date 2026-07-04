@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useActionState } from "react";
+import { useState, useActionState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Mail, Plus, Search, Tag, Copy, Play, Loader2 } from "lucide-react";
 import type { EmailTemplate, TemplateCategory } from "@/lib/types";
@@ -180,8 +180,17 @@ function PreviewModal({ template, onClose }: { template: EmailTemplate | null; o
 
 function EditTemplateModal({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void }) {
   const [state, formAction, pending] = useActionState<CreateTemplateState, FormData>(createTemplate, undefined);
+  const prevOk = useRef(false);
 
-  if (!open && state?.ok) setOpen(false);
+  useEffect(() => {
+    if (state?.ok && !prevOk.current) {
+      prevOk.current = true;
+      setOpen(false);
+    }
+    if (!state?.ok) {
+      prevOk.current = false;
+    }
+  }, [state?.ok, setOpen]);
 
   return (
     <Modal open={open} onClose={() => setOpen(false)} size="max-w-lg" label="New template">

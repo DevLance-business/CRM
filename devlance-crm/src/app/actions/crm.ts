@@ -26,12 +26,13 @@ export type CreateMemberState = { error?: string; ok?: boolean } | undefined;
 
 export async function createTeamMember(_prev: CreateMemberState, formData: FormData): Promise<CreateMemberState> {
   await requireAdmin();
+  const s = (v: FormDataEntryValue | null) => (v === null ? "" : String(v));
   const parsed = createMemberSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    password: formData.get("password"),
-    role: formData.get("role"),
-    title: formData.get("title"),
+    name: s(formData.get("name")),
+    email: s(formData.get("email")),
+    password: s(formData.get("password")),
+    role: s(formData.get("role")),
+    title: s(formData.get("title")),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid details" };
@@ -76,14 +77,15 @@ export type AddCompanyState = { error?: string; ok?: boolean; duplicate?: boolea
 
 export async function addCompany(_prev: AddCompanyState, formData: FormData): Promise<AddCompanyState> {
   const me = await requireUser();
+  const s = (v: FormDataEntryValue | null) => (v === null ? "" : String(v));
   const parsed = addCompanySchema.safeParse({
-    name: formData.get("name"),
-    website: formData.get("website"),
-    email: formData.get("email"),
-    industry: formData.get("industry"),
-    country: formData.get("country"),
-    source: formData.get("source"),
-    notes: formData.get("notes"),
+    name: s(formData.get("name")),
+    website: s(formData.get("website")),
+    email: s(formData.get("email")),
+    industry: s(formData.get("industry")),
+    country: s(formData.get("country")),
+    source: s(formData.get("source")),
+    notes: s(formData.get("notes")),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid details" };
@@ -249,13 +251,14 @@ export type LogEmailState = { error?: string; ok?: boolean } | undefined;
 
 export async function logEmail(_prev: LogEmailState, formData: FormData): Promise<LogEmailState> {
   const me = await requireUser();
+  const s = (v: FormDataEntryValue | null) => (v === null ? "" : String(v));
   const parsed = logEmailSchema.safeParse({
-    companyId: formData.get("companyId"),
-    templateId: formData.get("templateId"),
-    subject: formData.get("subject"),
-    body: formData.get("body"),
-    status: formData.get("status"),
-    notes: formData.get("notes"),
+    companyId: s(formData.get("companyId")),
+    templateId: s(formData.get("templateId")),
+    subject: s(formData.get("subject")),
+    body: s(formData.get("body")),
+    status: s(formData.get("status")),
+    notes: s(formData.get("notes")),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid" };
   const { companyId, templateId, subject, body, notes } = parsed.data;
@@ -348,11 +351,13 @@ export type UploadDocumentState = { error?: string; ok?: boolean } | undefined;
 export async function uploadDocument(_prev: UploadDocumentState, formData: FormData): Promise<UploadDocumentState> {
   const me = await requireUser();
 
+  const s = (v: FormDataEntryValue | null) => (v === null ? "" : String(v));
   const parsed = uploadDocumentSchema.safeParse({
-    name: formData.get("name"),
-    category: formData.get("category"),
-    version: formData.get("version"),
-    tags: formData.get("tags"),
+    name: s(formData.get("name")),
+    category: s(formData.get("category")),
+    version: s(formData.get("version")),
+    tags: s(formData.get("tags")),
+    scope: s(formData.get("scope")),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid document details" };
@@ -423,11 +428,12 @@ export type CreateTemplateState = { error?: string; ok?: boolean } | undefined;
 export async function createTemplate(_prev: CreateTemplateState, formData: FormData): Promise<CreateTemplateState> {
   await requireUser();
 
+  const s = (v: FormDataEntryValue | null) => (v === null ? "" : String(v));
   const parsed = createTemplateSchema.safeParse({
-    name: formData.get("name"),
-    category: formData.get("category"),
-    subject: formData.get("subject"),
-    body: formData.get("body"),
+    name: s(formData.get("name")),
+    category: s(formData.get("category")),
+    subject: s(formData.get("subject")),
+    body: s(formData.get("body")),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid template details" };
@@ -469,9 +475,10 @@ export type UpdateProfileState = { error?: string; ok?: boolean } | undefined;
 
 export async function updateProfile(_prev: UpdateProfileState, formData: FormData): Promise<UpdateProfileState> {
   const me = await requireUser();
+  const s = (v: FormDataEntryValue | null) => (v === null ? "" : String(v));
   const parsed = updateProfileSchema.safeParse({
-    name: formData.get("name"),
-    title: formData.get("title"),
+    name: s(formData.get("name")),
+    title: s(formData.get("title")),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid details" };
@@ -491,7 +498,7 @@ export type UpdateWorkspaceState = { error?: string; ok?: boolean } | undefined;
 
 export async function updateWorkspace(_prev: UpdateWorkspaceState, formData: FormData): Promise<UpdateWorkspaceState> {
   await requireAdmin();
-  const name = formData.get("name") as string;
+  const name = (formData.get("name") ?? "") as string;
   if (!name || name.trim().length < 2) {
     return { error: "Workspace name must be at least 2 characters" };
   }
@@ -506,5 +513,93 @@ export async function updateWorkspace(_prev: UpdateWorkspaceState, formData: For
   }
 
   revalidatePath("/settings");
+  return { ok: true };
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Team member: update & delete (Admin only)
+   ───────────────────────────────────────────────────────────── */
+
+const updateMemberSchema = z.object({
+  userId: z.string().min(1),
+  name: z.string().min(2, "Name is required"),
+  email: z.string().email("Enter a valid email"),
+  role: z.enum(["Sales", "Team Member"]),
+  title: z.string().optional(),
+  password: z.string().optional(),
+});
+
+export type UpdateMemberState = { error?: string; ok?: boolean } | undefined;
+
+export async function updateTeamMember(_prev: UpdateMemberState, formData: FormData): Promise<UpdateMemberState> {
+  await requireAdmin();
+  const s = (v: FormDataEntryValue | null) => (v === null ? "" : String(v));
+  const parsed = updateMemberSchema.safeParse({
+    userId: s(formData.get("userId")),
+    name: s(formData.get("name")),
+    email: s(formData.get("email")),
+    role: s(formData.get("role")),
+    title: s(formData.get("title")),
+    password: s(formData.get("password")),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid details" };
+  }
+  const { userId, name, email, role, title, password } = parsed.data;
+
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  if (!target) return { error: "User not found." };
+  if (target.role === "ADMIN") return { error: "Cannot edit the admin account." };
+
+  const emailConflict = await prisma.user.findFirst({ where: { email, id: { not: userId } } });
+  if (emailConflict) return { error: "Another user already uses this email." };
+
+  const data: Record<string, unknown> = {
+    name,
+    email,
+    role: role === "Sales" ? "SALES" : "TEAM_MEMBER",
+    title: title || null,
+  };
+
+  if (password && password.length >= 8) {
+    data.passwordHash = await bcrypt.hash(password, 10);
+  } else if (password && password.length > 0) {
+    return { error: "Password must be at least 8 characters if provided." };
+  }
+
+  await prisma.user.update({ where: { id: userId }, data });
+
+  revalidatePath("/settings");
+  revalidatePath("/team");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export type DeleteMemberState = { error?: string; ok?: boolean } | undefined;
+
+export async function deleteTeamMember(_prev: DeleteMemberState, formData: FormData): Promise<DeleteMemberState> {
+  await requireAdmin();
+  const userId = (formData.get("userId") ?? "") as string;
+  if (!userId) return { error: "No user specified." };
+
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  if (!target) return { error: "User not found." };
+  if (target.role === "ADMIN") return { error: "Cannot delete the admin account." };
+
+  await prisma.company.updateMany({
+    where: { assignedToId: userId },
+    data: { assignedToId: null },
+  });
+
+  await prisma.company.updateMany({
+    where: { lockedById: userId },
+    data: { lockedById: null, locked: false, lockedAt: null },
+  });
+
+  await prisma.user.delete({ where: { id: userId } });
+
+  revalidatePath("/settings");
+  revalidatePath("/team");
+  revalidatePath("/dashboard");
   return { ok: true };
 }

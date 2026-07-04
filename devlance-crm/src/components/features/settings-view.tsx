@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
-  ShieldCheck, Users2, Check, Plus, Loader2, Mail, Lock, User,
+  ShieldCheck, Users2, Check, Plus, Loader2, Mail, Lock, User, Pencil, Trash2, AlertTriangle,
 } from "lucide-react";
 import type { User as UserType } from "@/lib/types";
 import { useAuthStore } from "@/lib/store";
@@ -16,11 +16,12 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Modal } from "@/components/ui/overlay";
-import { toast } from "sonner";
 import {
   createTeamMember, type CreateMemberState,
   updateProfile, type UpdateProfileState,
   updateWorkspace, type UpdateWorkspaceState,
+  updateTeamMember, type UpdateMemberState,
+  deleteTeamMember, type DeleteMemberState,
 } from "@/app/actions/crm";
 
 const settingsTabs = [
@@ -34,6 +35,8 @@ export function SettingsView({ members, currentUserId, workspaceName }: { member
   const { user } = useAuthStore();
   const [tab, setTab] = useState("profile");
   const [addOpen, setAddOpen] = useState(false);
+  const [editMember, setEditMember] = useState<UserType | null>(null);
+  const [deleteMember, setDeleteMember] = useState<UserType | null>(null);
   if (!user) return null;
   const isAdmin = user.role === "Admin";
 
@@ -106,7 +109,14 @@ export function SettingsView({ members, currentUserId, workspaceName }: { member
                     </div>
                     <Badge variant={u.role === "Admin" ? "blue" : u.role === "Sales" ? "violet" : "neutral"}>{u.role}</Badge>
                     {isAdmin && u.id !== currentUserId && (
-                      <Button variant="ghost" size="sm" onClick={() => toast(`Editing ${u.name}'s role`)}>Edit</Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon-sm" onClick={() => setEditMember(u)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" onClick={() => setDeleteMember(u)}>
+                          <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -129,6 +139,8 @@ export function SettingsView({ members, currentUserId, workspaceName }: { member
       </Tabs>
 
       {isAdmin && <AddMemberModal open={addOpen} setOpen={setAddOpen} />}
+      {isAdmin && editMember && <EditMemberModal member={editMember} onClose={() => setEditMember(null)} />}
+      {isAdmin && deleteMember && <DeleteMemberModal member={deleteMember} onClose={() => setDeleteMember(null)} />}
     </div>
   );
 }
@@ -253,8 +265,17 @@ function RoleCard({ role, perms, accent, count }: { role: string; perms: string[
 
 function AddMemberModal({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void }) {
   const [state, formAction, pending] = useActionState<CreateMemberState, FormData>(createTeamMember, undefined);
+  const prevOk = useRef(false);
 
-  if (!open && state?.ok) setOpen(false);
+  useEffect(() => {
+    if (state?.ok && !prevOk.current) {
+      prevOk.current = true;
+      setOpen(false);
+    }
+    if (!state?.ok) {
+      prevOk.current = false;
+    }
+  }, [state?.ok, setOpen]);
 
   return (
     <Modal open={open} onClose={() => setOpen(false)} size="max-w-lg" label="Add team member">
@@ -311,6 +332,113 @@ function AddMemberModal({ open, setOpen }: { open: boolean; setOpen: (v: boolean
             {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</> : <><Plus className="h-4 w-4" /> Add team member</>}
           </Button>
           <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function EditMemberModal({ member, onClose }: { member: UserType; onClose: () => void }) {
+  const [state, formAction, pending] = useActionState<UpdateMemberState, FormData>(updateTeamMember, undefined);
+  const prevOk = useRef(false);
+
+  useEffect(() => {
+    if (state?.ok && !prevOk.current) {
+      prevOk.current = true;
+      onClose();
+    }
+    if (!state?.ok) {
+      prevOk.current = false;
+    }
+  }, [state?.ok, onClose]);
+
+  return (
+    <Modal open onClose={onClose} size="max-w-lg" label="Edit team member">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="grid h-11 w-11 place-items-center rounded-[14px] bg-brand-gradient text-white"><Pencil className="h-5 w-5" /></div>
+        <div>
+          <h2 className="font-display text-lg font-bold">Edit {member.name}</h2>
+          <p className="text-sm text-[var(--color-muted-foreground)]">Update their details — leave password blank to keep unchanged.</p>
+        </div>
+      </div>
+
+      <form action={formAction} className="space-y-3.5">
+        <input type="hidden" name="userId" value={member.id} />
+        <div className="grid grid-cols-2 gap-3.5">
+          <Field label="Full name" required className="col-span-2">
+            <Input name="name" required defaultValue={member.name} placeholder="Sofia Rinaldi" />
+          </Field>
+          <Field label="Work email" required className="col-span-2">
+            <Input name="email" type="email" required defaultValue={member.email} placeholder="sofia@devlance.com" />
+          </Field>
+          <Field label="Role">
+            <Select name="role" defaultValue={member.role === "Sales" ? "Sales" : "Team Member"}>
+              <option value="Sales">Sales</option>
+              <option value="Team Member">Team Member</option>
+            </Select>
+          </Field>
+          <Field label="Job title">
+            <Input name="title" defaultValue={member.title} placeholder="Outreach Specialist" />
+          </Field>
+          <Field label="New password (optional)" className="col-span-2">
+            <Input name="password" type="password" minLength={8} placeholder="Leave blank to keep current" />
+          </Field>
+        </div>
+
+        {state?.error && (
+          <p className="rounded-[10px] border border-rose-200/70 bg-rose-50 px-3 py-2 text-[12.5px] font-medium text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/[0.08] dark:text-rose-300">
+            {state.error}
+          </p>
+        )}
+
+        <div className="flex items-center gap-2 pt-2">
+          <Button type="submit" className="flex-1" disabled={pending}>
+            {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Save changes"}
+          </Button>
+          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function DeleteMemberModal({ member, onClose }: { member: UserType; onClose: () => void }) {
+  const [state, formAction, pending] = useActionState<DeleteMemberState, FormData>(deleteTeamMember, undefined);
+  const prevOk = useRef(false);
+
+  useEffect(() => {
+    if (state?.ok && !prevOk.current) {
+      prevOk.current = true;
+      onClose();
+    }
+    if (!state?.ok) {
+      prevOk.current = false;
+    }
+  }, [state?.ok, onClose]);
+
+  return (
+    <Modal open onClose={onClose} size="max-w-md" label="Remove team member">
+      <form action={formAction} className="text-center">
+        <input type="hidden" name="userId" value={member.id} />
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-[18px] bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300 mb-4">
+          <AlertTriangle className="h-7 w-7" />
+        </div>
+        <h2 className="font-display text-lg font-bold">Remove {member.name}?</h2>
+        <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+          They will lose access and their assigned companies will be unassigned. This cannot be undone.
+        </p>
+
+        {state?.error && (
+          <p className="mt-3 rounded-[10px] border border-rose-200/70 bg-rose-50 px-3 py-2 text-[12.5px] font-medium text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/[0.08] dark:text-rose-300">
+            {state.error}
+          </p>
+        )}
+
+        <div className="mt-6 flex items-center gap-2">
+          <Button type="submit" variant="danger" className="flex-1" disabled={pending}>
+            {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Removing…</> : <><Trash2 className="h-4 w-4" /> Remove</>}
+          </Button>
+          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
         </div>
       </form>
     </Modal>

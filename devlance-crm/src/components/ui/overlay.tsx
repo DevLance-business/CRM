@@ -108,7 +108,7 @@ export function Modal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ type: "spring", damping: 26, stiffness: 320 }}
-            className={cn("relative w-full glass rounded-[24px] p-6 shadow-[var(--shadow-hover)]", size)}
+            className={cn("relative w-full glass rounded-[24px] p-6 shadow-[var(--shadow-hover)] max-h-[90vh] overflow-y-auto", size)}
             style={{ maxWidth: "92vw" }}
           >
             <button

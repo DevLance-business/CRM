@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { AlertTriangle, Building2 } from "lucide-react";
 import { Modal } from "@/components/ui/overlay";
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,18 @@ import { addCompany, type AddCompanyState } from "@/app/actions/crm";
 export function AddCompanyModal() {
   const { quickAddOpen, setQuickAddOpen } = useUIStore();
   const [state, formAction, pending] = useActionState<AddCompanyState, FormData>(addCompany, undefined);
+  const prevOk = useRef(false);
 
-  if (!quickAddOpen && state?.ok) {
-    toast.success("Company added to the CRM");
-    setQuickAddOpen(false);
-  }
+  useEffect(() => {
+    if (state?.ok && !prevOk.current) {
+      prevOk.current = true;
+      toast.success("Company added to the CRM");
+      setQuickAddOpen(false);
+    }
+    if (!state?.ok) {
+      prevOk.current = false;
+    }
+  }, [state?.ok, setQuickAddOpen]);
 
   return (
     <Modal open={quickAddOpen} onClose={() => setQuickAddOpen(false)} size="max-w-lg" label="Add company">

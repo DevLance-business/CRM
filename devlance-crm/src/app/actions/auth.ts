@@ -23,11 +23,12 @@ const signupSchema = z.object({
 export type SignupState = { error?: string; ok?: boolean } | undefined;
 
 export async function signupAdmin(_prev: SignupState, formData: FormData): Promise<SignupState> {
+  const s = (v: FormDataEntryValue | null) => (v === null ? "" : String(v));
   const parsed = signupSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    password: formData.get("password"),
-    workspace: formData.get("workspace"),
+    name: s(formData.get("name")),
+    email: s(formData.get("email")),
+    password: s(formData.get("password")),
+    workspace: s(formData.get("workspace")),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid details" };
@@ -76,9 +77,10 @@ const loginSchema = z.object({
 export type LoginState = { error?: string; ok?: boolean } | undefined;
 
 export async function login(_prev: LoginState, formData: FormData): Promise<LoginState> {
+  const s = (v: FormDataEntryValue | null) => (v === null ? "" : String(v));
   const parsed = loginSchema.safeParse({
-    email: formData.get("email"),
-    password: formData.get("password"),
+    email: s(formData.get("email")),
+    password: s(formData.get("password")),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid credentials" };
