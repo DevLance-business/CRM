@@ -1,14 +1,13 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { getSessionUserId } from "@/lib/auth";
-import type { Role, CompanyStatus, CompanySource, EmailStatus, ActivityType, TemplateCategory } from "@/lib/types";
+import type { Role, CompanyStatus, CompanySource, EmailStatus, ActivityType } from "@/lib/types";
 import type { Company, EmailRecord, Activity, EmailTemplate, DocumentItem, User, DashboardData, KpiPoint } from "@/lib/types";
 import type {
   CompanyStatus as DbCompanyStatus,
   CompanySource as DbCompanySource,
   EmailStatus as DbEmailStatus,
   ActivityType as DbActivityType,
-  TemplateCategory as DbTemplateCategory,
   Role as DbRole,
   Visibility as DbVisibility,
 } from "@prisma/client";
@@ -52,11 +51,9 @@ export const activityTypeFromDb = (s: DbActivityType): ActivityType =>
 export const activityTypeToDb = (s: ActivityType): DbActivityType =>
   s.toUpperCase() as DbActivityType;
 
-export const templateCategoryFromDb = (s: DbTemplateCategory): TemplateCategory =>
-  s === "COLD_OUTREACH" ? "Cold Outreach" : s === "LINKEDIN_MESSAGE" ? "LinkedIn Message" : (s.replace(/_/g, " ").toLowerCase().replace(/(^|\s)\w/g, (c) => c.toUpperCase())) as TemplateCategory;
+export const templateCategoryFromDb = (s: string): string => s;
 
-export const templateCategoryToDb = (s: TemplateCategory): DbTemplateCategory =>
-  (s === "Cold Outreach" ? "COLD_OUTREACH" : s === "LinkedIn Message" ? "LINKEDIN_MESSAGE" : s.toUpperCase().replace(/ /g, "_")) as DbTemplateCategory;
+export const templateCategoryToDb = (s: string): string => s;
 
 export const roleFromDb = (r: DbRole): Role =>
   r === "ADMIN" ? "Admin" : r === "SALES" ? "Sales" : "Team Member";
@@ -155,6 +152,8 @@ export function mapTemplate(t: NonNullable<DbTemplate>): EmailTemplate {
     createdAt: t.createdAt.toISOString(),
     updatedAt: t.updatedAt.toISOString(),
     usageCount: t.usageCount,
+    scope: t.scope === "PRIVATE" ? "Private" : "Team",
+    createdBy: t.createdBy ?? "",
   };
 }
 
@@ -245,8 +244,16 @@ export async function getActivities(opts?: { actorId?: string; limit?: number })
 }
 
 export async function getEmailTemplates(): Promise<EmailTemplate[]> {
-  await requireUser();
-  const rows = await prisma.emailTemplate.findMany({ orderBy: { usageCount: "desc" } });
+  const me = await requireUser();
+  const rows = await prisma.emailTemplate.findMany({
+    where: {
+      OR: [
+        { scope: "TEAM" },
+        { createdBy: me.id },
+      ],
+    },
+    orderBy: { usageCount: "desc" },
+  });
   return rows.map(mapTemplate);
 }
 

@@ -22,7 +22,7 @@ export const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Companies", href: "/companies", icon: Building2 },
   { label: "Outreach", href: "/outreach", icon: Send },
-  { label: "Email Templates", href: "/templates", icon: Mail },
+  { label: "Templates", href: "/templates", icon: Mail },
   { label: "Documents", href: "/documents", icon: FileText },
   { label: "Activity", href: "/activity", icon: ActivityIcon },
   { label: "Team", href: "/team", icon: Users, adminOnly: true },

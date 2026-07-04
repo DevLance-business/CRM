@@ -91,13 +91,14 @@ model User {
 // Tracks workspace registration — only one Admin may self-register per workspace.
 // Reset the Admin by deleting this row.
 model WorkspaceMeta {
-  id               String   @id @default(cuid())
-  name             String   @default("DevLance HQ")
-  website          String?
-  adminEmail       String   @unique
-  initialized      Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  customCategories String[] @default([])
+  id                 String   @id @default(cuid())
+  name               String   @default("DevLance HQ")
+  website            String?
+  adminEmail         String   @unique
+  initialized        Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  customCategories   String[] @default([])
+  templateCategories String[] @default([])
 }
 
 model Company {
@@ -169,15 +170,17 @@ model Activity {
 }
 
 model EmailTemplate {
-  id         String            @id @default(cuid())
+  id         String     @id @default(cuid())
   name       String
-  category   TemplateCategory
+  category   String     @default("Cold Outreach")
   subject    String
   body       String
   variables  String[]
-  usageCount Int               @default(0)
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  usageCount Int        @default(0)
+  scope      Visibility @default(TEAM)
+  createdBy  String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }
 
 model DocumentItem {

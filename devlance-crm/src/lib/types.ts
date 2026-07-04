@@ -69,24 +69,20 @@ export interface EmailRecord {
   attachments: string[];
 }
 
-export type TemplateCategory =
-  | "Cold Outreach"
-  | "Follow-up"
-  | "Meeting Request"
-  | "Proposal"
-  | "Thank You"
-  | "LinkedIn Message";
+export type TemplateCategory = string;
 
 export interface EmailTemplate {
   id: string;
   name: string;
-  category: TemplateCategory;
+  category: string;
   subject: string;
   body: string;
   variables: string[];
   createdAt: string;
   updatedAt: string;
   usageCount: number;
+  scope: "Team" | "Private";
+  createdBy: string;
 }
 
 export type DocumentCategory = string;

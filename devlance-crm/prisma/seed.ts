@@ -43,37 +43,37 @@ async function main() {
   console.log("→ Seeding email templates…");
   const templates = await Promise.all([
     prisma.emailTemplate.create({ data: {
-      name: "Cold Intro — Product Engineering", category: "COLD_OUTREACH",
+      name: "Cold Intro — Product Engineering", category: "Cold Outreach",
       subject: "Helping {{company_name}} ship faster",
       body: "Hi {{contact_name}},\n\nI came across {{company_name}} and loved what you're building in the {{service}} space. DevLance partners with founders to scale product engineering and design without the hiring overhead.\n\nWould you be open to a quick 15-min intro next week?\n\nBest,\n{{sender_name}}",
       variables: ["company_name", "contact_name", "sender_name", "service"], usageCount: 142,
     }}),
     prisma.emailTemplate.create({ data: {
-      name: "Gentle Follow-up", category: "FOLLOW_UP",
+      name: "Gentle Follow-up", category: "Follow-up",
       subject: "Re: Helping {{company_name}} ship faster",
       body: "Hi {{contact_name}},\n\nFloating this back to the top of your inbox. If timing isn't right, no worries at all — let me know and I'll circle back in a quarter.\n\n{{sender_name}}",
       variables: ["contact_name", "sender_name", "company_name"], usageCount: 98,
     }}),
     prisma.emailTemplate.create({ data: {
-      name: "Meeting Request", category: "MEETING_REQUEST",
+      name: "Meeting Request", category: "Meeting Request",
       subject: "15 minutes next week?",
       body: "Hi {{contact_name}},\n\nGiven {{company_name}}'s work on {{service}}, I suspect a short call would be mutually useful. Would Tuesday or Thursday afternoon work for a 15-min Google Meet?\n\nBest,\n{{sender_name}}",
       variables: ["contact_name", "company_name", "service", "sender_name"], usageCount: 67,
     }}),
     prisma.emailTemplate.create({ data: {
-      name: "Proposal Recap", category: "PROPOSAL",
+      name: "Proposal Recap", category: "Proposal",
       subject: "DevLance proposal for {{company_name}}",
       body: "Hi {{contact_name}},\n\nFollowing our call, here's the tailored proposal for {{company_name}}. I've attached the scope, timeline, and pricing details for your {{service}} initiative.\n\nHappy to refine — just say the word.\n\n{{sender_name}}",
       variables: ["company_name", "contact_name", "service", "sender_name"], usageCount: 34,
     }}),
     prisma.emailTemplate.create({ data: {
-      name: "Thank You Post-Meeting", category: "THANK_YOU",
+      name: "Thank You Post-Meeting", category: "Thank You",
       subject: "Great chatting, {{contact_name}}",
       body: "Hi {{contact_name}},\n\nThanks for the time today — really enjoyed learning more about {{company_name}}'s roadmap. As discussed, I'll send over the case studies by end of week.\n\nWarmly,\n{{sender_name}}",
       variables: ["contact_name", "company_name", "sender_name"], usageCount: 51,
     }}),
     prisma.emailTemplate.create({ data: {
-      name: "LinkedIn Opener", category: "LINKEDIN_MESSAGE",
+      name: "LinkedIn Opener", category: "LinkedIn Message",
       subject: "",
       body: "Hi {{contact_name}} — really impressed by {{company_name}}'s growth. We help teams like yours scale product engineering. Open to connecting?",
       variables: ["contact_name", "company_name"], usageCount: 210,
@@ -82,15 +82,15 @@ async function main() {
 
   // ── Documents ───────────────────────────────────────────────
   console.log("→ Seeding documents…");
-  const docs: Array<{ name: string; category: "COMPANY_PROFILE" | "PORTFOLIO" | "PRICING_SHEET" | "CASE_STUDIES" | "PROPOSAL_TEMPLATES" | "BROCHURES" | "CONTRACTS" | "CERTIFICATES"; size: string; type: string; version: string; tags: string[]; url: string }> = [
-    { name: "DevLance Company Profile 2026.pdf", category: "COMPANY_PROFILE", size: "2.4 MB", type: "pdf", version: "v3.1", tags: ["pitch", "overview"], url: "#" },
-    { name: "Portfolio — Selected Works 2025.pdf", category: "PORTFOLIO", size: "18.7 MB", type: "pdf", version: "v2.0", tags: ["portfolio", "case-studies"], url: "#" },
-    { name: "Pricing Sheet — Engineering Pods.xlsx", category: "PRICING_SHEET", size: "640 KB", type: "xlsx", version: "v1.4", tags: ["pricing", "engagement-models"], url: "#" },
-    { name: "Case Study — Northwind Labs.pdf", category: "CASE_STUDIES", size: "4.1 MB", type: "pdf", version: "v1.0", tags: ["ai", "infra", "case-study"], url: "#" },
-    { name: "Proposal Template — Product Engineering.docx", category: "PROPOSAL_TEMPLATES", size: "1.1 MB", type: "docx", version: "v2.3", tags: ["proposal", "template"], url: "#" },
-    { name: "Sales Brochure — DevLance Brand.pdf", category: "BROCHURES", size: "8.9 MB", type: "pdf", version: "v2.0", tags: ["marketing", "brand"], url: "#" },
-    { name: "MSA — Master Services Agreement.pdf", category: "CONTRACTS", size: "780 KB", type: "pdf", version: "v4.0", tags: ["legal", "contract"], url: "#" },
-    { name: "ISO 27001 Certificate.pdf", category: "CERTIFICATES", size: "320 KB", type: "pdf", version: "v1.0", tags: ["compliance", "security"], url: "#" },
+  const docs: Array<{ name: string; category: string; size: string; type: string; version: string; tags: string[]; url: string }> = [
+    { name: "DevLance Company Profile 2026.pdf", category: "Company Profile", size: "2.4 MB", type: "pdf", version: "v3.1", tags: ["pitch", "overview"], url: "#" },
+    { name: "Portfolio — Selected Works 2025.pdf", category: "Portfolio", size: "18.7 MB", type: "pdf", version: "v2.0", tags: ["portfolio", "case-studies"], url: "#" },
+    { name: "Pricing Sheet — Engineering Pods.xlsx", category: "Pricing Sheet", size: "640 KB", type: "xlsx", version: "v1.4", tags: ["pricing", "engagement-models"], url: "#" },
+    { name: "Case Study — Northwind Labs.pdf", category: "Case Studies", size: "4.1 MB", type: "pdf", version: "v1.0", tags: ["ai", "infra", "case-study"], url: "#" },
+    { name: "Proposal Template — Product Engineering.docx", category: "Proposal Templates", size: "1.1 MB", type: "docx", version: "v2.3", tags: ["proposal", "template"], url: "#" },
+    { name: "Sales Brochure — DevLance Brand.pdf", category: "Brochures", size: "8.9 MB", type: "pdf", version: "v2.0", tags: ["marketing", "brand"], url: "#" },
+    { name: "MSA — Master Services Agreement.pdf", category: "Contracts", size: "780 KB", type: "pdf", version: "v4.0", tags: ["legal", "contract"], url: "#" },
+    { name: "ISO 27001 Certificate.pdf", category: "Certificates", size: "320 KB", type: "pdf", version: "v1.0", tags: ["compliance", "security"], url: "#" },
   ];
   for (const d of docs) {
     await prisma.documentItem.create({ data: { ...d, uploadedById: admin.id, uploadedAt: daysAgo(40) } });

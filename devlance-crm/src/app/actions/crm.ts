@@ -433,14 +433,15 @@ export async function uploadDocument(_prev: UploadDocumentState, formData: FormD
 const createTemplateSchema = z.object({
   name: z.string().min(1, "Template name is required"),
   category: z.string().min(1, "Category is required"),
-  subject: z.string().min(1, "Subject is required"),
+  subject: z.string().optional().or(z.literal("")),
   body: z.string().min(1, "Body is required"),
+  scope: z.enum(["Team", "Private"]).default("Team"),
 });
 
 export type CreateTemplateState = { error?: string; ok?: boolean } | undefined;
 
 export async function createTemplate(_prev: CreateTemplateState, formData: FormData): Promise<CreateTemplateState> {
-  await requireUser();
+  const me = await requireUser();
 
   const s = (v: FormDataEntryValue | null) => (v === null ? "" : String(v));
   const parsed = createTemplateSchema.safeParse({
@@ -448,11 +449,12 @@ export async function createTemplate(_prev: CreateTemplateState, formData: FormD
     category: s(formData.get("category")),
     subject: s(formData.get("subject")),
     body: s(formData.get("body")),
+    scope: s(formData.get("scope")),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid template details" };
   }
-  const { name, category, subject, body } = parsed.data;
+  const { name, category, subject, body, scope } = parsed.data;
 
   const variableRegex = /\{\{(\w+)\}\}/g;
   const variables: string[] = [];
@@ -465,12 +467,30 @@ export async function createTemplate(_prev: CreateTemplateState, formData: FormD
     data: {
       name,
       category: templateCategoryToDb(category as TemplateCategory),
-      subject,
+      subject: subject || "",
       body,
       variables,
       usageCount: 0,
+      scope: scope === "Private" ? "PRIVATE" : "TEAM",
+      createdBy: me.id,
     },
   });
+
+  revalidatePath("/templates");
+  return { ok: true };
+}
+
+export type DeleteTemplateState = { error?: string; ok?: boolean } | undefined;
+
+export async function deleteTemplate(_prev: DeleteTemplateState, formData: FormData): Promise<DeleteTemplateState> {
+  await requireUser();
+  const templateId = (formData.get("templateId") ?? "") as string;
+  if (!templateId) return { error: "No template specified." };
+
+  const template = await prisma.emailTemplate.findUnique({ where: { id: templateId } });
+  if (!template) return { error: "Template not found." };
+
+  await prisma.emailTemplate.delete({ where: { id: templateId } });
 
   revalidatePath("/templates");
   return { ok: true };
@@ -659,5 +679,47 @@ export async function removeCustomCategory(_prev: CategoryState, formData: FormD
   });
 
   revalidatePath("/documents");
+  return { ok: true };
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Template categories (Admin only)
+   ───────────────────────────────────────────────────────────── */
+
+export async function addTemplateCategory(_prev: CategoryState, formData: FormData): Promise<CategoryState> {
+  await requireAdmin();
+  const name = ((formData.get("name") ?? "") as string).trim();
+  if (!name || name.length < 2) return { error: "Category name must be at least 2 characters." };
+
+  const meta = await prisma.workspaceMeta.findFirst();
+  if (!meta) return { error: "Workspace not found." };
+
+  const current = (meta.templateCategories ?? []) as string[];
+  if (current.includes(name)) return { error: "This category already exists." };
+
+  await prisma.workspaceMeta.update({
+    where: { id: meta.id },
+    data: { templateCategories: [...current, name] },
+  });
+
+  revalidatePath("/templates");
+  return { ok: true };
+}
+
+export async function removeTemplateCategory(_prev: CategoryState, formData: FormData): Promise<CategoryState> {
+  await requireAdmin();
+  const name = ((formData.get("name") ?? "") as string).trim();
+  if (!name) return { error: "No category specified." };
+
+  const meta = await prisma.workspaceMeta.findFirst();
+  if (!meta) return { error: "Workspace not found." };
+
+  const current = (meta.templateCategories ?? []) as string[];
+  await prisma.workspaceMeta.update({
+    where: { id: meta.id },
+    data: { templateCategories: current.filter((c) => c !== name) },
+  });
+
+  revalidatePath("/templates");
   return { ok: true };
 }
