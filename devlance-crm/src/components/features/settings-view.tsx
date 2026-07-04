@@ -157,7 +157,7 @@ function ProfileForm({ user }: { user: UserType }) {
         <Avatar name={user.name} color={user.avatarColor} online={user.online} size="lg" />
       </div>
       <div className="grid grid-cols-2 gap-3.5">
-        <Field label="Full name">
+        <Field label="Full name" required>
           <Input name="name" defaultValue={user.name} required />
         </Field>
         <Field label="Title">
@@ -268,13 +268,13 @@ function AddMemberModal({ open, setOpen }: { open: boolean; setOpen: (v: boolean
 
       <form action={formAction} className="space-y-3.5">
         <div className="grid grid-cols-2 gap-3.5">
-          <Field label="Full name" className="col-span-2">
+          <Field label="Full name" required className="col-span-2">
             <div className="relative">
               <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input name="name" required className="pl-10" placeholder="Sofia Rinaldi" />
             </div>
           </Field>
-          <Field label="Work email" className="col-span-2">
+          <Field label="Work email" required className="col-span-2">
             <div className="relative">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input name="email" type="email" required className="pl-10" placeholder="sofia@devlance.com" />
@@ -289,7 +289,7 @@ function AddMemberModal({ open, setOpen }: { open: boolean; setOpen: (v: boolean
           <Field label="Job title (optional)">
             <Input name="title" placeholder="Outreach Specialist" />
           </Field>
-          <Field label="Password" className="col-span-2">
+          <Field label="Password" required className="col-span-2">
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input name="password" type="password" required minLength={8} className="pl-10" placeholder="At least 8 characters" />

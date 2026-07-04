@@ -218,7 +218,7 @@ function UploadModal({ open, setOpen, categories }: { open: boolean; setOpen: (v
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3.5">
-          <Field label="Document name" className="col-span-2">
+          <Field label="Document name" required className="col-span-2">
             <Input name="name" required placeholder="Company Profile — DevLance 2026" />
           </Field>
           <Field label="Category">

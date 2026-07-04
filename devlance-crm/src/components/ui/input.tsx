@@ -52,17 +52,24 @@ export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLab
 export function Field({
   label,
   hint,
+  required,
   children,
   className,
 }: {
   label?: string;
   hint?: string;
+  required?: boolean;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <div className={className}>
-      {label && <Label>{label}</Label>}
+      {label && (
+        <Label>
+          {label}
+          {required && <span className="ml-0.5 text-rose-500">*</span>}
+        </Label>
+      )}
       {children}
       {hint && <p className="mt-1.5 text-xs text-[var(--color-muted-foreground)]">{hint}</p>}
     </div>

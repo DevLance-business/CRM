@@ -30,9 +30,9 @@ export function AddCompanyModal() {
 
       <form action={formAction} className="space-y-3.5">
         <div className="grid grid-cols-2 gap-3.5">
-          <Field label="Company name" className="col-span-2"><Input name="name" required placeholder="Northwind Labs" /></Field>
-          <Field label="Website"><Input name="website" required placeholder="https://…" /></Field>
-          <Field label="Primary email"><Input name="email" type="email" placeholder="growth@…" /></Field>
+          <Field label="Company name" required className="col-span-2"><Input name="name" required placeholder="Northwind Labs" /></Field>
+          <Field label="Website"><Input name="website" placeholder="https://…" /></Field>
+          <Field label="Primary email" required><Input name="email" type="email" required placeholder="growth@…" /></Field>
           <Field label="Industry"><Input name="industry" placeholder="AI / SaaS" /></Field>
           <Field label="Country"><Input name="country" placeholder="United States" /></Field>
         </div>

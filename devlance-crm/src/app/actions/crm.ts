@@ -64,8 +64,8 @@ export async function createTeamMember(_prev: CreateMemberState, formData: FormD
 
 const addCompanySchema = z.object({
   name: z.string().min(2, "Company name is required"),
-  website: z.string().min(3, "Website is required"),
-  email: z.string().email().optional().or(z.literal("")),
+  website: z.string().optional().or(z.literal("")),
+  email: z.string().email("Enter a valid email").min(1, "Email is required"),
   industry: z.string().optional(),
   country: z.string().optional(),
   source: z.string().optional(),
@@ -90,14 +90,16 @@ export async function addCompany(_prev: AddCompanyState, formData: FormData): Pr
   }
   const { name, website, email, industry, country, source, notes } = parsed.data;
 
+  const websiteClean = website || "";
+
   // Duplicate detection
-  const domain = website.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0].toLowerCase();
+  const domain = websiteClean ? websiteClean.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0].toLowerCase() : "";
   const emailDomain = email ? email.split("@")[1]?.toLowerCase() : "";
   const existing = await prisma.company.findFirst({
     where: {
       OR: [
-        { name: { equals: name, mode: "insensitive" } },
-        { website: { contains: domain, mode: "insensitive" } },
+        { name: { equals: name, mode: "insensitive" as const } },
+        ...(domain ? [{ website: { contains: domain, mode: "insensitive" as const } }] : []),
         ...(emailDomain ? [{ contactEmails: { has: email } }] : []),
       ],
     },
@@ -107,7 +109,7 @@ export async function addCompany(_prev: AddCompanyState, formData: FormData): Pr
   const company = await prisma.company.create({
     data: {
       name,
-      website,
+      website: websiteClean,
       industry: industry || null,
       country: country || null,
       contactEmails: email ? [email] : [],

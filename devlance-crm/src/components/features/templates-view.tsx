@@ -201,7 +201,7 @@ function EditTemplateModal({ open, setOpen }: { open: boolean; setOpen: (v: bool
 
       <form action={formAction} className="space-y-3.5">
         <div className="grid grid-cols-2 gap-3.5">
-          <Field label="Template name" className="col-span-2">
+          <Field label="Template name" required className="col-span-2">
             <Input name="name" required placeholder="Cold Intro — Product Engineering" />
           </Field>
           <Field label="Category">
@@ -214,11 +214,11 @@ function EditTemplateModal({ open, setOpen }: { open: boolean; setOpen: (v: bool
               <option>LinkedIn Message</option>
             </Select>
           </Field>
-          <Field label="Subject">
+          <Field label="Subject" required>
             <Input name="subject" required placeholder="Helping {{company_name}} ship faster" />
           </Field>
         </div>
-        <Field label="Body" hint="Variables: {{company_name}}, {{contact_name}}, {{sender_name}}, {{service}}, {{website}}">
+        <Field label="Body" required hint="Variables: {{company_name}}, {{contact_name}}, {{sender_name}}, {{service}}, {{website}}">
           <Textarea name="body" required rows={7} placeholder={"Hi {{contact_name}},\n\nI came across {{company_name}}…"} />
         </Field>
 

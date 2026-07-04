@@ -148,7 +148,7 @@ function LogEmailModal({ open, setOpen, companies, templates }: { open: boolean;
             {templates.map((t) => (<option key={t.id} value={t.id}>{t.name} · {t.category}</option>))}
           </Select>
         </Field>
-        <Field label="Subject"><Input name="subject" required placeholder="Re: Helping Northwind Labs ship faster" /></Field>
+        <Field label="Subject" required><Input name="subject" required placeholder="Re: Helping Northwind Labs ship faster" /></Field>
         <Field label="Body"><Textarea name="body" rows={5} placeholder="Write the email…" /></Field>
         <Field label="Status">
           <Select name="status" defaultValue="Sent">
