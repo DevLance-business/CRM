@@ -89,22 +89,14 @@ export interface EmailTemplate {
   usageCount: number;
 }
 
-export type DocumentCategory =
-  | "Company Profile"
-  | "Portfolio"
-  | "Pricing Sheet"
-  | "Case Studies"
-  | "Proposal Templates"
-  | "Brochures"
-  | "Contracts"
-  | "Certificates";
+export type DocumentCategory = string;
 
 export interface DocumentItem {
   id: string;
   name: string;
-  category: DocumentCategory;
+  category: string;
   size: string;
-  type: "pdf" | "pptx" | "docx" | "xlsx" | "image";
+  type: "pdf" | "pptx" | "docx" | "xlsx" | "image" | "text";
   uploadedBy: string;
   uploadedAt: string;
   version: string;

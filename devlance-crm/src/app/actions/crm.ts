@@ -5,9 +5,9 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin, requireUser } from "@/lib/data";
-import { statusToDb, sourceToDb, emailStatusToDb, templateCategoryToDb, documentCategoryToDb, scopeToDb } from "@/lib/data";
+import { statusToDb, sourceToDb, emailStatusToDb, templateCategoryToDb, scopeToDb } from "@/lib/data";
 import { avatarGradient } from "@/lib/utils";
-import type { CompanyStatus, CompanySource, EmailStatus, TemplateCategory, DocumentCategory } from "@/lib/types";
+import type { CompanyStatus, CompanySource, EmailStatus, TemplateCategory } from "@/lib/types";
 import type { ActivityType as DbActivityType } from "@prisma/client";
 
 /* ─────────────────────────────────────────────────────────────
@@ -329,6 +329,7 @@ const uploadDocumentSchema = z.object({
   version: z.string().min(1, "Version is required"),
   tags: z.string().optional(),
   scope: z.enum(["Team", "Private"]).default("Team"),
+  textContent: z.string().optional(),
 });
 
 function formatBytes(bytes: number): string {
@@ -364,28 +365,41 @@ export async function uploadDocument(_prev: UploadDocumentState, formData: FormD
   }
   const { name, category, version, tags } = parsed.data;
   const scope = parsed.data.scope === "Private" ? "Private" as const : "Team" as const;
+  const textContent = parsed.data.textContent || "";
 
   const file = formData.get("file") as File | null;
-  if (!file || !(file instanceof File) || file.size === 0) {
-    return { error: "Please select a file to upload." };
+  const hasFile = file && file instanceof File && file.size > 0;
+  const hasText = textContent.trim().length > 0;
+
+  if (!hasFile && !hasText) {
+    return { error: "Please select a file or enter text content." };
   }
 
-  const maxSize = 10 * 1024 * 1024;
-  if (file.size > maxSize) {
-    return { error: "File is too large. Maximum size is 10 MB." };
+  let base64: string;
+  let fileType: string;
+  let fileSize: number;
+
+  if (hasFile) {
+    if (file.size > 10 * 1024 * 1024) {
+      return { error: "File is too large. Maximum size is 10 MB." };
+    }
+    const buffer = Buffer.from(await file.arrayBuffer());
+    base64 = buffer.toString("base64");
+    fileType = getFileType(file.type);
+    fileSize = file.size;
+  } else {
+    base64 = Buffer.from(textContent.trim(), "utf-8").toString("base64");
+    fileType = "text";
+    fileSize = new TextEncoder().encode(textContent.trim()).length;
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const base64 = buffer.toString("base64");
-
-  const fileType = getFileType(file.type);
   const tagList = tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
 
   const doc = await prisma.documentItem.create({
     data: {
       name,
-      category: documentCategoryToDb(category as DocumentCategory),
-      size: formatBytes(file.size),
+      category,
+      size: formatBytes(fileSize),
       type: fileType,
       version,
       tags: tagList,
@@ -402,7 +416,7 @@ export async function uploadDocument(_prev: UploadDocumentState, formData: FormD
       actorId: me.id,
       companyId: null,
       message: `uploaded document "${doc.name}"`,
-      meta: { category, version, size: formatBytes(file.size) },
+      meta: { category, version, size: formatBytes(fileSize) },
     },
   });
 
@@ -601,5 +615,49 @@ export async function deleteTeamMember(_prev: DeleteMemberState, formData: FormD
   revalidatePath("/settings");
   revalidatePath("/team");
   revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Custom document categories (Admin only)
+   ───────────────────────────────────────────────────────────── */
+
+export type CategoryState = { error?: string; ok?: boolean } | undefined;
+
+export async function addCustomCategory(_prev: CategoryState, formData: FormData): Promise<CategoryState> {
+  await requireAdmin();
+  const name = ((formData.get("name") ?? "") as string).trim();
+  if (!name || name.length < 2) return { error: "Category name must be at least 2 characters." };
+
+  const meta = await prisma.workspaceMeta.findFirst();
+  if (!meta) return { error: "Workspace not found." };
+
+  const current = (meta.customCategories ?? []) as string[];
+  if (current.includes(name)) return { error: "This category already exists." };
+
+  await prisma.workspaceMeta.update({
+    where: { id: meta.id },
+    data: { customCategories: [...current, name] },
+  });
+
+  revalidatePath("/documents");
+  return { ok: true };
+}
+
+export async function removeCustomCategory(_prev: CategoryState, formData: FormData): Promise<CategoryState> {
+  await requireAdmin();
+  const name = ((formData.get("name") ?? "") as string).trim();
+  if (!name) return { error: "No category specified." };
+
+  const meta = await prisma.workspaceMeta.findFirst();
+  if (!meta) return { error: "Workspace not found." };
+
+  const current = (meta.customCategories ?? []) as string[];
+  await prisma.workspaceMeta.update({
+    where: { id: meta.id },
+    data: { customCategories: current.filter((c) => c !== name) },
+  });
+
+  revalidatePath("/documents");
   return { ok: true };
 }

@@ -67,17 +67,6 @@ enum TemplateCategory {
   LINKEDIN_MESSAGE
 }
 
-enum DocumentCategory {
-  COMPANY_PROFILE
-  PORTFOLIO
-  PRICING_SHEET
-  CASE_STUDIES
-  PROPOSAL_TEMPLATES
-  BROCHURES
-  CONTRACTS
-  CERTIFICATES
-}
-
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -102,12 +91,13 @@ model User {
 // Tracks workspace registration — only one Admin may self-register per workspace.
 // Reset the Admin by deleting this row.
 model WorkspaceMeta {
-  id          String   @id @default(cuid())
-  name        String   @default("DevLance HQ")
-  website     String?
-  adminEmail  String   @unique
-  initialized Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id               String   @id @default(cuid())
+  name             String   @default("DevLance HQ")
+  website          String?
+  adminEmail       String   @unique
+  initialized      Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  customCategories String[] @default([])
 }
 
 model Company {
@@ -191,18 +181,18 @@ model EmailTemplate {
 }
 
 model DocumentItem {
-  id           String           @id @default(cuid())
+  id           String     @id @default(cuid())
   name         String
-  category     DocumentCategory
+  category     String     @default("Company Profile")
   size         String
   type         String
   uploadedById String?
-  uploadedBy   User?            @relation(fields: [uploadedById], references: [id])
-  uploadedAt   DateTime         @default(now())
+  uploadedBy   User?      @relation(fields: [uploadedById], references: [id])
+  uploadedAt   DateTime   @default(now())
   version      String
   tags         String[]
-  url          String           @default("")
-  scope        Visibility       @default(TEAM)
+  url          String     @default("")
+  scope        Visibility @default(TEAM)
   base64       String?
 }
 

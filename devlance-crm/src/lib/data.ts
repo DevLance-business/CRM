@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { getSessionUserId } from "@/lib/auth";
-import type { Role, CompanyStatus, CompanySource, EmailStatus, ActivityType, TemplateCategory, DocumentCategory } from "@/lib/types";
+import type { Role, CompanyStatus, CompanySource, EmailStatus, ActivityType, TemplateCategory } from "@/lib/types";
 import type { Company, EmailRecord, Activity, EmailTemplate, DocumentItem, User, DashboardData, KpiPoint } from "@/lib/types";
 import type {
   CompanyStatus as DbCompanyStatus,
@@ -9,7 +9,6 @@ import type {
   EmailStatus as DbEmailStatus,
   ActivityType as DbActivityType,
   TemplateCategory as DbTemplateCategory,
-  DocumentCategory as DbDocumentCategory,
   Role as DbRole,
   Visibility as DbVisibility,
 } from "@prisma/client";
@@ -58,12 +57,6 @@ export const templateCategoryFromDb = (s: DbTemplateCategory): TemplateCategory 
 
 export const templateCategoryToDb = (s: TemplateCategory): DbTemplateCategory =>
   (s === "Cold Outreach" ? "COLD_OUTREACH" : s === "LinkedIn Message" ? "LINKEDIN_MESSAGE" : s.toUpperCase().replace(/ /g, "_")) as DbTemplateCategory;
-
-export const documentCategoryFromDb = (s: DbDocumentCategory): DocumentCategory =>
-  s === "COMPANY_PROFILE" ? "Company Profile" : s === "PRICING_SHEET" ? "Pricing Sheet" : s === "CASE_STUDIES" ? "Case Studies" : s === "PROPOSAL_TEMPLATES" ? "Proposal Templates" : (s.replace(/_/g, " ").toLowerCase().replace(/(^|\s)\w/g, (c) => c.toUpperCase())) as DocumentCategory;
-
-export const documentCategoryToDb = (s: DocumentCategory): DbDocumentCategory =>
-  (s === "Company Profile" ? "COMPANY_PROFILE" : s === "Pricing Sheet" ? "PRICING_SHEET" : s === "Case Studies" ? "CASE_STUDIES" : s === "Proposal Templates" ? "PROPOSAL_TEMPLATES" : s.toUpperCase().replace(/ /g, "_")) as DbDocumentCategory;
 
 export const roleFromDb = (r: DbRole): Role =>
   r === "ADMIN" ? "Admin" : r === "SALES" ? "Sales" : "Team Member";
@@ -170,7 +163,7 @@ export function mapDocument(d: NonNullable<DbDoc>): DocumentItem {
   return {
     id: d.id,
     name: d.name,
-    category: documentCategoryFromDb(d.category),
+    category: d.category,
     size: d.size,
     type: d.type as DocumentItem["type"],
     uploadedBy: d.uploadedById ?? "",
