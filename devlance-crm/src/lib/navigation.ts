@@ -15,6 +15,7 @@ export interface NavItem {
   href: string;
   icon: LucideIcon;
   badge?: string;
+  adminOnly?: boolean;
 }
 
 export const navItems: NavItem[] = [
@@ -24,6 +25,6 @@ export const navItems: NavItem[] = [
   { label: "Email Templates", href: "/templates", icon: Mail },
   { label: "Documents", href: "/documents", icon: FileText },
   { label: "Activity", href: "/activity", icon: ActivityIcon },
-  { label: "Team", href: "/team", icon: Users },
+  { label: "Team", href: "/team", icon: Users, adminOnly: true },
   { label: "Settings", href: "/settings", icon: Settings },
 ];

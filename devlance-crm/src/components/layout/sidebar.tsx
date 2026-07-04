@@ -29,6 +29,8 @@ export function Sidebar() {
 
   if (!user) return null;
 
+  const isAdmin = user.role === "Admin";
+
   return (
     <>
       {/* Mobile rail */}
@@ -72,7 +74,7 @@ export function Sidebar() {
 
         {/* Nav */}
         <nav className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
-          {navItems.map((item) => {
+          {navItems.filter((item) => !item.adminOnly || isAdmin).map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(item.href + "/");
             return (
@@ -214,6 +216,7 @@ function MobileNav() {
   const pathname = usePathname();
   const { user } = useAuthStore();
   if (!user) return null;
+  const isAdmin = user.role === "Admin";
 
   return (
     <AnimatePresence>
@@ -248,7 +251,7 @@ function MobileNav() {
               <Plus className="h-4 w-4" /> Quick Add Company
             </Button>
             <nav className="flex-1 space-y-1 overflow-y-auto">
-              {navItems.map((item) => {
+              {navItems.filter((item) => !item.adminOnly || isAdmin).map((item) => {
                 const active = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
                   <Link
