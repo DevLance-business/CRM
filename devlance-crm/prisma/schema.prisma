@@ -1,0 +1,205 @@
+// DevLance CRM — Prisma schema
+// Neon PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SALES
+  TEAM_MEMBER
+}
+
+enum CompanyStatus {
+  NOT_CONTACTED
+  OUTREACH_ACTIVE
+  REPLIED
+  MEETING_SCHEDULED
+  PROPOSAL_SENT
+  CLOSED_WON
+  CLOSED_LOST
+  ON_HOLD
+}
+
+enum CompanySource {
+  LINKEDIN
+  REFERRAL
+  COLD_LIST
+  INBOUND
+  CLUTCH
+  UPWORK
+  EVENT
+}
+
+enum EmailStatus {
+  DRAFT
+  SENT
+  WAITING_FOR_REPLY
+  REPLIED
+}
+
+enum ActivityType {
+  COMPANY_ADDED
+  COMPANY_ASSIGNED
+  EMAIL_SENT
+  REPLY_RECEIVED
+  FOLLOW_UP_SCHEDULED
+  MEETING_CREATED
+  NOTES_UPDATED
+  DOCUMENT_UPLOADED
+  OUTREACH_STARTED
+  OUTREACH_RELEASED
+  STATUS_CHANGED
+}
+
+enum TemplateCategory {
+  COLD_OUTREACH
+  FOLLOW_UP
+  MEETING_REQUEST
+  PROPOSAL
+  THANK_YOU
+  LINKEDIN_MESSAGE
+}
+
+enum DocumentCategory {
+  COMPANY_PROFILE
+  PORTFOLIO
+  PRICING_SHEET
+  CASE_STUDIES
+  PROPOSAL_TEMPLATES
+  BROCHURES
+  CONTRACTS
+  CERTIFICATES
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(TEAM_MEMBER)
+  title        String?
+  avatarColor  String   @default("from-blue-500 to-sky-400")
+  online       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastLoginAt  DateTime?
+
+  createdCompanies  Company[]      @relation("CreatedCompanies")
+  assignedCompanies Company[]      @relation("AssignedCompanies")
+  lockedCompanies   Company[]      @relation("LockedCompanies")
+  sentEmails        Email[]
+  activities        Activity[]
+  uploadedDocuments DocumentItem[]
+}
+
+// Tracks workspace registration — only one Admin may self-register per workspace.
+// Reset the Admin by deleting this row.
+model WorkspaceMeta {
+  id          String   @id @default(cuid())
+  name        String   @default("DevLance HQ")
+  website     String?
+  adminEmail  String   @unique
+  initialized Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model Company {
+  id             String        @id @default(cuid())
+  name           String
+  website        String
+  industry       String?
+  country        String?
+  linkedin       String?
+  contactEmails  String[]      // contact emails
+  phone          String?
+  companySize    String?
+  source         CompanySource @default(COLD_LIST)
+  notes          String?
+  createdById    String
+  createdBy      User          @relation("CreatedCompanies", fields: [createdById], references: [id])
+  assignedToId   String?
+  assignedTo     User?         @relation("AssignedCompanies", fields: [assignedToId], references: [id])
+  status         CompanyStatus @default(NOT_CONTACTED)
+  locked         Boolean       @default(false)
+  lockedById     String?
+  lockedBy       User?         @relation("LockedCompanies", fields: [lockedById], references: [id])
+  lockedAt       DateTime?
+  lastOutreachAt DateTime?
+  nextFollowUpAt DateTime?
+  followUpCount  Int           @default(0)
+  responseRate   Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  emails      Email[]
+  activities  Activity[]
+
+  @@index([assignedToId])
+  @@index([createdById])
+}
+
+model Email {
+  id          String      @id @default(cuid())
+  companyId   String
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  subject     String
+  templateId  String?
+  senderId    String
+  sender      User        @relation(fields: [senderId], references: [id])
+  body        String
+  sentAt      DateTime    @default(now())
+  status      EmailStatus @default(SENT)
+  notes       String?
+  attachments String[]
+
+  @@index([companyId])
+  @@index([senderId])
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  type     ActivityType
+  actorId  String
+  actor    User         @relation(fields: [actorId], references: [id])
+  companyId String?
+  company  Company?     @relation(fields: [companyId], references: [id])
+  message  String
+  meta     Json?
+  createdAt DateTime    @default(now())
+
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+model EmailTemplate {
+  id         String            @id @default(cuid())
+  name       String
+  category   TemplateCategory
+  subject    String
+  body       String
+  variables  String[]
+  usageCount Int               @default(0)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+}
+
+model DocumentItem {
+  id           String           @id @default(cuid())
+  name         String
+  category     DocumentCategory
+  size         String
+  type         String
+  uploadedById String?
+  uploadedBy   User?            @relation(fields: [uploadedById], references: [id])
+  uploadedAt   DateTime         @default(now())
+  version      String
+  tags         String[]
+  url          String
+}

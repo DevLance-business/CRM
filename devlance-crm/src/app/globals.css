@@ -1,0 +1,211 @@
+@import "tailwindcss";
+
+/* ============================================================
+   DEVLANCE BRAND DESIGN SYSTEM
+   Premium SaaS — Agency Outreach CRM
+   ============================================================ */
+
+@theme inline {
+  /* Brand colors */
+  --color-brand: #2563eb;
+  --color-brand-hover: #1d4ed8;
+  --color-sky: #60a5fa;
+  --color-cyan: #22d3ee;
+  --color-background: #fafbfc;
+  --color-foreground: #0f172a;
+  --color-muted-foreground: #64748b;
+  --color-secondary-foreground: #475569;
+  --color-surface: rgba(255, 255, 255, 0.85);
+  --color-border-subtle: rgba(226, 232, 240, 0.7);
+  --color-glass-border: rgba(255, 255, 255, 0.75);
+
+  /* Semantic */
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+  --color-primary: #2563eb;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #eff6ff;
+  --color-secondary-foreground: #1d4ed8;
+  --color-ring: #2563eb;
+  --color-input: rgba(15, 23, 42, 0.08);
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-danger: #dc2626;
+
+  /* Fonts */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-jakarta), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* Shadows */
+  --shadow-soft: 0 15px 30px -10px rgba(0, 0, 0, 0.03);
+  --shadow-hover: 0 20px 40px -12px rgba(37, 99, 235, 0.16);
+  --shadow-glow: 0 15px 30px -8px rgba(37, 99, 235, 0.08);
+
+  /* Gradient */
+  --gradient-brand: linear-gradient(135deg, #2563eb 0%, #60a5fa 50%, #22d3ee 100%);
+  --gradient-button: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+
+  /* Sidebar */
+  --sidebar-width: 264px;
+  --sidebar-collapsed: 76px;
+
+  /* Easings */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root {
+  --background: #fafbfc;
+  --foreground: #0f172a;
+}
+
+.dark {
+  --background: #070b16;
+  --foreground: #e6edf7;
+  --color-background: #070b16;
+  --color-foreground: #e6edf7;
+  --color-secondary-foreground: #cbd5e1;
+  --color-muted-foreground: #94a3b8;
+  --color-surface: rgba(17, 24, 39, 0.72);
+  --color-card: rgba(17, 24, 39, 0.7);
+  --color-card-foreground: #e6edf7;
+  --color-border-subtle: rgba(148, 163, 184, 0.16);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-input: rgba(148, 163, 184, 0.18);
+  --color-secondary: rgba(37, 99, 235, 0.14);
+  --color-secondary-foreground: #93c5fd;
+}
+
+* {
+  border-color: var(--color-border-subtle);
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Headings use Plus Jakarta Sans */
+h1, h2, h3, h4, h5, h6,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.25);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(37, 99, 235, 0.4); background-clip: content-box; }
+
+/* ============================================================
+   SELECTION
+   ============================================================ */
+::selection { background: rgba(37, 99, 235, 0.18); color: #0f172a; }
+.dark ::selection { background: rgba(96, 165, 250, 0.3); color: #e6edf7; }
+
+/* ============================================================
+   GLASS PRIMITIVE
+   ============================================================ */
+.glass {
+  background: var(--color-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+}
+
+/* ============================================================
+   TEXT GRADIENT
+   ============================================================ */
+.text-gradient {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* ============================================================
+   BUTTON GRADIENT
+   ============================================================ */
+.bg-brand-gradient { background-image: var(--gradient-button); }
+
+/* ============================================================
+   AMBIENT ORB
+   ============================================================ */
+.ambient-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, rgba(148,163,184,0.08) 25%, rgba(148,163,184,0.18) 50%, rgba(148,163,184,0.08) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20px, -30px) scale(1.05); }
+}
+.animate-float-slow { animation: float-slow 14s ease-in-out infinite; }
+
+@keyframes float-slow-rev {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-25px, 20px) scale(1.08); }
+}
+.animate-float-slow-rev { animation: float-slow-rev 18s ease-in-out infinite; }
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { animation: fade-in-up 0.5s var(--ease-out-soft) both; }
+
+/* Focus ring utility */
+.focus-ring {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
