@@ -26,5 +26,5 @@ export const navItems: NavItem[] = [
   { label: "Documents", href: "/documents", icon: FileText },
   { label: "Activity", href: "/activity", icon: ActivityIcon },
   { label: "Team", href: "/team", icon: Users, adminOnly: true },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Settings", href: "/settings", icon: Settings, adminOnly: true },
 ];

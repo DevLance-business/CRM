@@ -26,8 +26,8 @@ import {
 const settingsTabs = [
   { value: "profile", label: "Profile" },
   { value: "notifications", label: "Notifications" },
-  { value: "roles", label: "Roles & access" },
-  { value: "workspace", label: "Workspace" },
+  { value: "roles", label: "Roles & access", adminOnly: true },
+  { value: "workspace", label: "Workspace", adminOnly: true },
 ];
 
 export function SettingsView({ members, currentUserId, workspaceName }: { members: UserType[]; currentUserId: string; workspaceName: string }) {
@@ -37,13 +37,15 @@ export function SettingsView({ members, currentUserId, workspaceName }: { member
   if (!user) return null;
   const isAdmin = user.role === "Admin";
 
+  const visibleTabs = settingsTabs.filter((t) => !t.adminOnly || isAdmin);
+
   return (
     <div className="space-y-6 pb-12">
       <PageHeader eyebrow="Configuration" title="Settings" description="Manage your profile, notifications, team roles, and workspace preferences." />
 
       <Tabs value={tab} onValueChange={setTab} variant="pill">
         <TabsList className="flex-wrap">
-          {settingsTabs.map((t) => (<TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>))}
+          {visibleTabs.map((t) => (<TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>))}
         </TabsList>
 
         <TabsContent value="profile" className="mt-5">

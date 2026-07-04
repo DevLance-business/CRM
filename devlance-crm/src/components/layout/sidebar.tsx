@@ -156,7 +156,9 @@ export function Sidebar() {
                 exit={{ opacity: 0, y: 8, scale: 0.97 }}
                 className="absolute bottom-full left-0 right-0 mb-2 rounded-[14px] glass p-1.5 shadow-[var(--shadow-hover)]"
               >
-                <ProfileMenuItem icon={SettingsIcon} label="Account settings" />
+                <Link href="/settings" onClick={() => setProfileOpen(false)} className="block">
+                  <ProfileMenuItem icon={SettingsIcon} label="Account settings" />
+                </Link>
                 <ProfileMenuItem icon={HelpCircle} label="Help & docs" />
                 <div className="my-1 h-px bg-[var(--color-border-subtle)]" />
                 <ProfileMenuItem icon={LogOut} label="Sign out" danger onClick={() => void(logout())} />
