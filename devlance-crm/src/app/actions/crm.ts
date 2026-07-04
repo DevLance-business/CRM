@@ -359,6 +359,7 @@ export async function uploadDocument(_prev: UploadDocumentState, formData: FormD
     version: s(formData.get("version")),
     tags: s(formData.get("tags")),
     scope: s(formData.get("scope")),
+    textContent: s(formData.get("textContent")),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid document details" };
@@ -367,8 +368,8 @@ export async function uploadDocument(_prev: UploadDocumentState, formData: FormD
   const scope = parsed.data.scope === "Private" ? "Private" as const : "Team" as const;
   const textContent = parsed.data.textContent || "";
 
-  const file = formData.get("file") as File | null;
-  const hasFile = file && file instanceof File && file.size > 0;
+  const file = formData.get("file") as (File & { arrayBuffer?: () => Promise<ArrayBuffer> }) | null;
+  const hasFile = file !== null && typeof file.size === "number" && file.size > 0;
   const hasText = textContent.trim().length > 0;
 
   if (!hasFile && !hasText) {
@@ -379,18 +380,23 @@ export async function uploadDocument(_prev: UploadDocumentState, formData: FormD
   let fileType: string;
   let fileSize: number;
 
-  if (hasFile) {
-    if (file.size > 10 * 1024 * 1024) {
-      return { error: "File is too large. Maximum size is 10 MB." };
+  try {
+    if (hasFile && file) {
+      if (file.size > 5 * 1024 * 1024) {
+        return { error: "File is too large. Maximum size is 5 MB." };
+      }
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const buffer = Buffer.from(bytes);
+      base64 = buffer.toString("base64");
+      fileType = getFileType(file.type);
+      fileSize = file.size;
+    } else {
+      base64 = Buffer.from(textContent.trim(), "utf-8").toString("base64");
+      fileType = "text";
+      fileSize = new TextEncoder().encode(textContent.trim()).length;
     }
-    const buffer = Buffer.from(await file.arrayBuffer());
-    base64 = buffer.toString("base64");
-    fileType = getFileType(file.type);
-    fileSize = file.size;
-  } else {
-    base64 = Buffer.from(textContent.trim(), "utf-8").toString("base64");
-    fileType = "text";
-    fileSize = new TextEncoder().encode(textContent.trim()).length;
+  } catch {
+    return { error: "Failed to process file. The file may be corrupted or too large." };
   }
 
   const tagList = tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [];

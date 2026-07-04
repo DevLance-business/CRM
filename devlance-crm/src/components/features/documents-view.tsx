@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef, startTransition } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   FileText, Plus, Search, Upload, FileSpreadsheet, Presentation, FileType,
   Image as ImageIcon, Tag, CloudUpload, X, Loader2, Download, Settings2,
-  Trash2,
+  Trash2, Maximize2, Minimize2,
 } from "lucide-react";
 import type { DocumentItem, User } from "@/lib/types";
 import { useAuthStore } from "@/lib/store";
@@ -63,6 +64,7 @@ export function DocumentsView({ documents, users, customCategories }: { document
   const [tab, setTab] = useState<string>("All");
   const [query, setQuery] = useState("");
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [preview, setPreview] = useState<DocumentItem | null>(null);
   const [catOpen, setCatOpen] = useState(false);
 
   const userById = (id: string) => users[id] ?? undefined;
@@ -108,7 +110,7 @@ export function DocumentsView({ documents, users, customCategories }: { document
             const uploader = userById(d.uploadedBy);
             return (
               <motion.div key={d.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                <Card hover className="group cursor-pointer h-full">
+                <Card hover className="group cursor-pointer h-full" onClick={() => setPreview(d)}>
                   <CardContent className="p-4 flex flex-col h-full">
                     <div className="flex items-start justify-between gap-2">
                       <div className={cn("grid h-10 w-10 place-items-center rounded-[12px]", typeColor(d.type))}><Icon className="h-5 w-5" /></div>
@@ -138,6 +140,7 @@ export function DocumentsView({ documents, users, customCategories }: { document
 
       <UploadModal open={uploadOpen} setOpen={setUploadOpen} categories={allCategories} />
       {isAdmin && <CategoryModal open={catOpen} setOpen={setCatOpen} customCategories={customCategories} />}
+      {preview && <DocumentPreview doc={preview} users={users} onClose={() => setPreview(null)} />}
     </div>
   );
 }
@@ -219,7 +222,7 @@ function UploadModal({ open, setOpen, categories }: { open: boolean; setOpen: (v
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-brand-gradient text-white"><CloudUpload className="h-4 w-4" /></div>
         <div>
           <h2 className="font-display text-base font-bold">Upload a document</h2>
-          <p className="text-[11.5px] text-[var(--color-muted-foreground)]">PDF, DOCX, XLSX, PPTX, images, or plain text.</p>
+          <p className="text-[11.5px] text-[var(--color-muted-foreground)]">PDF, DOCX, XLSX, PPTX, images, or text — up to 5 MB.</p>
         </div>
       </div>
 
@@ -242,7 +245,6 @@ function UploadModal({ open, setOpen, categories }: { open: boolean; setOpen: (v
           >
             <CloudUpload className="mx-auto h-8 w-8 text-blue-500" />
             <p className="mt-1.5 text-[13px] font-bold">{fileName ? fileName : "Drag & drop or click"}</p>
-            <p className="text-[11px] text-[var(--color-muted-foreground)]">Up to 10 MB</p>
             <label className="mt-2 inline-block">
               <span className="text-[11px] font-semibold text-blue-600 cursor-pointer">Browse files</span>
               <input type="file" className="hidden" onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)} />
@@ -351,6 +353,187 @@ function CategoryModal({ open, setOpen, customCategories }: { open: boolean; set
           {error}
         </p>
       )}
+    </Modal>
+  );
+}
+
+function DocumentPreview({ doc, users, onClose }: { doc: DocumentItem; users: Record<string, User>; onClose: () => void }) {
+  const uploader = users[doc.uploadedBy];
+  const previewUrl = `/api/documents/${doc.id}/preview`;
+  const downloadUrl = `/api/documents/${doc.id}/download`;
+  const isText = doc.type === "text";
+  const isPdf = doc.type === "pdf";
+  const isImage = doc.type === "image";
+  const isPreviewable = isText || isPdf || isImage;
+
+  const [textContent, setTextContent] = useState<string | null>(null);
+  const [textLoading, setTextLoading] = useState(false);
+  const [textLoaded, setTextLoaded] = useState(false);
+
+  const loadText = () => {
+    if (textLoading || textLoaded) return;
+    setTextLoading(true);
+    fetch(previewUrl)
+      .then((res) => res.text())
+      .then((t) => { setTextContent(t); setTextLoaded(true); })
+      .catch(() => { setTextContent("(Failed to load content)"); setTextLoaded(true); })
+      .finally(() => setTextLoading(false));
+  };
+  const [fullscreen, setFullscreen] = useState(false);
+
+  const handleDownload = () => {
+    window.open(downloadUrl, "_blank");
+  };
+
+  if (fullscreen) {
+    return (
+      <div className="fixed inset-0 z-[95] bg-white dark:bg-slate-950 flex flex-col">
+        <div className="flex items-center justify-between p-3 border-b border-[var(--color-border-subtle)] shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-[8px]", typeColor(doc.type))}>
+              {doc.type === "pdf" ? <FileType className="h-3.5 w-3.5" /> : doc.type === "xlsx" ? <FileSpreadsheet className="h-3.5 w-3.5" /> : doc.type === "pptx" ? <Presentation className="h-3.5 w-3.5" /> : doc.type === "docx" ? <FileText className="h-3.5 w-3.5" /> : doc.type === "image" ? <ImageIcon className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
+            </div>
+            <p className="text-[13px] font-bold truncate">{doc.name}</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Button size="sm" variant="secondary" onClick={handleDownload}>
+              <Download className="h-3.5 w-3.5" /> Download
+            </Button>
+            <button onClick={() => setFullscreen(false)} className="grid h-8 w-8 place-items-center rounded-[8px] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] text-slate-600 dark:text-slate-300">
+              <Minimize2 className="h-4 w-4" />
+            </button>
+            <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-[8px] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] text-slate-600 dark:text-slate-300">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0">
+          {isPdf && <iframe src={previewUrl} className="w-full h-full" title={doc.name} />}
+          {isImage && (
+            <div className="w-full h-full flex items-center justify-center p-4">
+              <Image src={previewUrl} alt={doc.name} width={1200} height={900} className="max-w-full max-h-full object-contain" unoptimized />
+            </div>
+          )}
+          {isText && (
+            <div className="h-full overflow-y-auto p-4">
+              <pre className="whitespace-pre-wrap text-[14px] leading-relaxed font-sans">{textContent || "(Load content to preview)"}</pre>
+            </div>
+          )}
+          {!isPreviewable && (
+            <div className="h-full flex flex-col items-center justify-center gap-3">
+              <div className={cn("grid h-16 w-16 place-items-center rounded-[16px]", typeColor(doc.type))}>
+                {doc.type === "pdf" ? <FileType className="h-8 w-8" /> : doc.type === "xlsx" ? <FileSpreadsheet className="h-8 w-8" /> : doc.type === "pptx" ? <Presentation className="h-8 w-8" /> : doc.type === "docx" ? <FileText className="h-8 w-8" /> : doc.type === "image" ? <ImageIcon className="h-8 w-8" /> : <FileText className="h-8 w-8" />}
+              </div>
+              <p className="font-display text-[16px] font-bold">{doc.name}</p>
+              <p className="text-[13px] text-[var(--color-muted-foreground)]">{doc.type.toUpperCase()} · {doc.size}</p>
+              <Button onClick={handleDownload}><Download className="h-4 w-4" /> Download file</Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Modal open onClose={onClose} size="max-w-xl" label={doc.name}>
+      <div className="flex items-start justify-between gap-3 mb-4 pr-8">
+        <div className="flex items-center gap-3">
+          <div className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-[10px]", typeColor(doc.type))}>
+            {doc.type === "pdf" ? <FileType className="h-4 w-4" /> : doc.type === "xlsx" ? <FileSpreadsheet className="h-4 w-4" /> : doc.type === "pptx" ? <Presentation className="h-4 w-4" /> : doc.type === "docx" ? <FileText className="h-4 w-4" /> : doc.type === "image" ? <ImageIcon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+          </div>
+          <div className="min-w-0">
+            <h2 className="font-display text-base font-bold leading-tight">{doc.name}</h2>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[11px] text-[var(--color-muted-foreground)]">{doc.category} · {doc.size}</span>
+              {doc.scope === "Private" && <Badge variant="amber" dot>Private</Badge>}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button size="sm" variant="secondary" onClick={handleDownload}>
+            <Download className="h-3.5 w-3.5" /> Download
+          </Button>
+          {isPreviewable && (
+            <button onClick={() => setFullscreen(true)} className="grid h-8 w-8 place-items-center rounded-[8px] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] text-slate-600 dark:text-slate-300" title="Full screen">
+              <Maximize2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isPdf && (
+        <div className="rounded-[14px] border border-[var(--color-border-subtle)] overflow-hidden" style={{ height: "60vh" }}>
+          <iframe src={previewUrl} className="w-full h-full" title={doc.name} />
+        </div>
+      )}
+
+      {isImage && (
+        <div className="rounded-[14px] border border-[var(--color-border-subtle)] overflow-hidden flex items-center justify-center bg-white/60 dark:bg-white/5" style={{ minHeight: "40vh" }}>
+          <Image src={previewUrl} alt={doc.name} width={800} height={600} className="max-w-full max-h-[60vh] object-contain" unoptimized />
+        </div>
+      )}
+
+      {isText && (
+        <div>
+          {!textLoaded ? (
+            <div className="rounded-[14px] border border-[var(--color-border-subtle)] bg-white/60 dark:bg-white/5 p-8 flex flex-col items-center text-center">
+              <p className="font-display text-[14px] font-bold mb-1">{doc.name}</p>
+              <p className="text-[12px] text-[var(--color-muted-foreground)] mb-4">{doc.type.toUpperCase()} · {doc.size}</p>
+              <Button size="sm" onClick={loadText} disabled={textLoading}>
+                {textLoading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…</> : "Preview text"}
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">Content</p>
+                <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => { setTextLoaded(false); loadText(); }}>
+                  Refresh
+                </Button>
+              </div>
+              <pre className="whitespace-pre-wrap rounded-[14px] border border-[var(--color-border-subtle)] bg-white/60 dark:bg-white/5 p-4 text-[13px] leading-relaxed font-sans max-h-[50vh] overflow-y-auto">{textContent || ""}</pre>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isPreviewable && (
+        <div className="rounded-[14px] border border-[var(--color-border-subtle)] bg-white/60 dark:bg-white/5 p-6 flex flex-col items-center text-center">
+          <div className={cn("grid h-20 w-20 place-items-center rounded-[20px] mb-3", typeColor(doc.type))}>
+            {doc.type === "pdf" ? <FileType className="h-10 w-10" /> : doc.type === "xlsx" ? <FileSpreadsheet className="h-10 w-10" /> : doc.type === "pptx" ? <Presentation className="h-10 w-10" /> : doc.type === "docx" ? <FileText className="h-10 w-10" /> : doc.type === "image" ? <ImageIcon className="h-10 w-10" /> : <FileText className="h-10 w-10" />}
+          </div>
+          <p className="font-display text-[14px] font-bold mt-2">{doc.name}</p>
+          <p className="text-[12px] text-[var(--color-muted-foreground)] mt-1">{doc.type.toUpperCase()} · {doc.size}</p>
+          <Button size="sm" className="mt-4" onClick={handleDownload}>
+            <Download className="h-3.5 w-3.5" /> Download file
+          </Button>
+        </div>
+      )}
+
+      <div className="mt-4 border-t border-[var(--color-border-subtle)] pt-3 space-y-1.5">
+        {doc.version && (
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-[var(--color-muted-foreground)]">Version</span>
+            <span className="font-semibold">{doc.version}</span>
+          </div>
+        )}
+        {uploader && (
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-[var(--color-muted-foreground)]">Uploaded by</span>
+            <span className="font-semibold">{uploader.name}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="text-[var(--color-muted-foreground)]">Uploaded</span>
+          <span className="font-semibold">{formatDate(doc.uploadedAt)}</span>
+        </div>
+        {doc.tags.length > 0 && (
+          <div className="flex items-center gap-2 text-[11px]">
+            <span className="text-[var(--color-muted-foreground)] shrink-0">Tags</span>
+            <div className="flex gap-1 flex-wrap justify-end">{doc.tags.map((t) => <Badge key={t} variant="outline">{t}</Badge>)}</div>
+          </div>
+        )}
+      </div>
     </Modal>
   );
 }

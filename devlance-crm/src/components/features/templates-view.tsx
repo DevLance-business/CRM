@@ -402,6 +402,14 @@ function TemplatePreview({ template, onClose }: { template: EmailTemplate; onClo
     URL.revokeObjectURL(url);
   };
 
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(template.body);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <Modal open onClose={onClose} size="max-w-xl" label={template.name}>
       <div className="flex items-start justify-between gap-3 mb-4">
@@ -423,9 +431,14 @@ function TemplatePreview({ template, onClose }: { template: EmailTemplate; onClo
             </div>
           </div>
         </div>
-        <Button size="sm" variant="secondary" onClick={handleDownload}>
-          <Download className="h-3.5 w-3.5" /> Download
-        </Button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button size="sm" variant="secondary" onClick={handleDownload}>
+            <Download className="h-3.5 w-3.5" /> Download
+          </Button>
+          <Button size="sm" variant="secondary" onClick={handleCopy}>
+            {copied ? <><Check className="h-3.5 w-3.5" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy</>}
+          </Button>
+        </div>
       </div>
 
       {template.subject && (
