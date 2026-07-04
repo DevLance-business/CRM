@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx prisma/seed.ts",
-    "seed:force": "tsx prisma/seed.ts --force"
+    "seed:force": "tsx prisma/seed.ts --force",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

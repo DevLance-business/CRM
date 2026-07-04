@@ -2,8 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
-import { writeFile, mkdir } from "node:fs/promises";
-import { join } from "node:path";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin, requireUser } from "@/lib/data";
@@ -365,19 +363,13 @@ export async function uploadDocument(_prev: UploadDocumentState, formData: FormD
     return { error: "Please select a file to upload." };
   }
 
-  const maxSize = 50 * 1024 * 1024;
+  const maxSize = 10 * 1024 * 1024;
   if (file.size > maxSize) {
-    return { error: "File is too large. Maximum size is 50 MB." };
+    return { error: "File is too large. Maximum size is 10 MB." };
   }
 
-  const fileName = file.name;
-  const safeName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-  const uploadsDir = join(process.cwd(), "public", "uploads");
-  await mkdir(uploadsDir, { recursive: true });
-  const filePath = join(uploadsDir, safeName);
-
   const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(filePath, buffer);
+  const base64 = buffer.toString("base64");
 
   const fileType = getFileType(file.type);
   const tagList = tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
@@ -390,7 +382,8 @@ export async function uploadDocument(_prev: UploadDocumentState, formData: FormD
       type: fileType,
       version,
       tags: tagList,
-      url: `/uploads/${safeName}`,
+      url: "",
+      base64,
       uploadedById: me.id,
       scope: scopeToDb(scope),
     },

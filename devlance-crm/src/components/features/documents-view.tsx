@@ -103,8 +103,8 @@ export function DocumentsView({ documents, users }: { documents: DocumentItem[];
                     <div className="mt-4 flex items-center justify-between border-t border-[var(--color-border-subtle)] pt-3">
                       {uploader && (<div className="flex items-center gap-1.5"><Avatar name={uploader.name} color={uploader.avatarColor} size="xs" /><span className="text-[11px] font-semibold text-[var(--color-muted-foreground)]">{formatDate(d.uploadedAt)}</span></div>)}
                       <a
-                        href={d.url}
-                        download={d.name}
+                        href={`/api/documents/${d.id}/download`}
+                        download
                         onClick={(e) => e.stopPropagation()}
                         className="grid h-8 w-8 place-items-center rounded-[10px] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors"
                       >

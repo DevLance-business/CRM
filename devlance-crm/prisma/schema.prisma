@@ -201,8 +201,9 @@ model DocumentItem {
   uploadedAt   DateTime         @default(now())
   version      String
   tags         String[]
-  url          String
+  url          String           @default("")
   scope        Visibility       @default(TEAM)
+  base64       String?
 }
 
 enum Visibility {
