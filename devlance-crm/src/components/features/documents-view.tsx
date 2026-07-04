@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useActionState, useRef } from "react";
+import { useState, useRef, startTransition } from "react";
 import { motion } from "framer-motion";
 import {
   FileText, Plus, Search, Upload,
   FileSpreadsheet, Presentation, FileType,
-  Image as ImageIcon, Tag, CloudUpload, X, Loader2,
+  Image as ImageIcon, Tag, CloudUpload, X, Loader2, Download,
 } from "lucide-react";
 import type { DocumentCategory, DocumentItem, User } from "@/lib/types";
 import { useAuthStore } from "@/lib/store";
@@ -19,8 +19,7 @@ import { Modal } from "@/components/ui/overlay";
 import { EmptyState } from "@/components/ui/states";
 import { Avatar } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
-import { uploadDocument, type UploadDocumentState } from "@/app/actions/crm";
+import { uploadDocument } from "@/app/actions/crm";
 
 const categories: (DocumentCategory | "All")[] = [
   "All", "Company Profile", "Portfolio", "Pricing Sheet", "Case Studies",
@@ -103,7 +102,14 @@ export function DocumentsView({ documents, users }: { documents: DocumentItem[];
                     </div>
                     <div className="mt-4 flex items-center justify-between border-t border-[var(--color-border-subtle)] pt-3">
                       {uploader && (<div className="flex items-center gap-1.5"><Avatar name={uploader.name} color={uploader.avatarColor} size="xs" /><span className="text-[11px] font-semibold text-[var(--color-muted-foreground)]">{formatDate(d.uploadedAt)}</span></div>)}
-                      <Button variant="ghost" size="icon-sm" onClick={(e) => { e.stopPropagation(); toast.success(`Previewing ${d.name}`); }}><FileText className="h-4 w-4" /></Button>
+                      <a
+                        href={d.url}
+                        download={d.name}
+                        onClick={(e) => e.stopPropagation()}
+                        className="grid h-8 w-8 place-items-center rounded-[10px] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors"
+                      >
+                        <Download className="h-4 w-4" />
+                      </a>
                     </div>
                   </CardContent>
                 </Card>
@@ -120,13 +126,63 @@ export function DocumentsView({ documents, users }: { documents: DocumentItem[];
 
 function UploadModal({ open, setOpen, categories }: { open: boolean; setOpen: (v: boolean) => void; categories: (DocumentCategory | "All")[] }) {
   const [drag, setDrag] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
-  const [state, formAction, pending] = useActionState<UploadDocumentState, FormData>(uploadDocument, undefined);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const { user } = useAuthStore();
   const isAdmin = user?.role === "Admin";
 
-  if (!open && state?.ok) setOpen(false);
+  if (!open && !pending) {
+    if (error) setError(null);
+    return;
+  }
+
+  const handleFileSelect = (file: File | null) => {
+    if (file) {
+      setSelectedFile(file);
+      setFileName(file.name);
+      setError(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDrag(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile) {
+      setError("Please select a file to upload.");
+      return;
+    }
+
+    const form = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+    formData.set("file", selectedFile);
+
+    setPending(true);
+    setError(null);
+
+    startTransition(async () => {
+      try {
+        const result = await uploadDocument(undefined, formData);
+        if (result?.error) {
+          setError(result.error);
+        } else {
+          setOpen(false);
+        }
+      } catch {
+        setError("Upload failed. Please try again.");
+      } finally {
+        setPending(false);
+      }
+    });
+  };
 
   return (
     <Modal open={open} onClose={() => setOpen(false)} size="max-w-lg" label="Upload document">
@@ -138,14 +194,27 @@ function UploadModal({ open, setOpen, categories }: { open: boolean; setOpen: (v
         </div>
       </div>
 
-      <form action={formAction}>
-        <div onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); if (e.dataTransfer.files[0]) { const dt = new DataTransfer(); dt.items.add(e.dataTransfer.files[0]); if (fileRef.current) { fileRef.current.files = dt.files; setFileName(e.dataTransfer.files[0]!.name); } }; }} className={cn("rounded-[16px] border-2 border-dashed p-8 text-center transition-colors", drag ? "border-blue-400 bg-blue-50/50 dark:bg-blue-500/[0.08]" : "border-[var(--color-border-subtle)] bg-white/30 dark:bg-white/[0.03]")}>
+      <form ref={formRef} onSubmit={handleSubmit}>
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={handleDrop}
+          className={cn("rounded-[16px] border-2 border-dashed p-8 text-center transition-colors", drag ? "border-blue-400 bg-blue-50/50 dark:bg-blue-500/[0.08]" : "border-[var(--color-border-subtle)] bg-white/30 dark:bg-white/[0.03]")}
+        >
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-[18px] bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300"><CloudUpload className="h-7 w-7" /></div>
           <p className="mt-3 font-display font-bold text-[15px]">
             {fileName ? fileName : "Drag & drop files here"}
           </p>
           <p className="text-[12px] text-[var(--color-muted-foreground)] mt-1">or browse from your device</p>
-          <label className="mt-4 inline-flex"><span className="inline-flex items-center gap-2 rounded-[12px] bg-brand-gradient px-4 py-2 text-[13px] font-semibold text-white cursor-pointer"><Plus className="h-4 w-4" /> Browse files</span><input ref={fileRef} name="file" type="file" multiple={false} className="hidden" onChange={(e) => { if (e.target.files?.[0]) setFileName(e.target.files[0].name); }} /></label>
+          <label className="mt-4 inline-flex">
+            <span className="inline-flex items-center gap-2 rounded-[12px] bg-brand-gradient px-4 py-2 text-[13px] font-semibold text-white cursor-pointer"><Plus className="h-4 w-4" /> Browse files</span>
+            <input
+              type="file"
+              multiple={false}
+              className="hidden"
+              onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
+            />
+          </label>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3.5">
@@ -173,9 +242,9 @@ function UploadModal({ open, setOpen, categories }: { open: boolean; setOpen: (v
           )}
         </div>
 
-        {state?.error && (
+        {error && (
           <p className="mt-3 rounded-[10px] border border-rose-200/70 bg-rose-50 px-3 py-2 text-[12.5px] font-medium text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/[0.08] dark:text-rose-300">
-            {state.error}
+            {error}
           </p>
         )}
 
