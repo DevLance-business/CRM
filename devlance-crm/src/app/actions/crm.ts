@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin, requireUser } from "@/lib/data";
-import { statusToDb, sourceToDb, emailStatusToDb } from "@/lib/data";
+import { statusToDb, sourceToDb, emailStatusToDb, templateCategoryToDb, documentCategoryToDb, scopeToDb } from "@/lib/data";
 import { avatarGradient } from "@/lib/utils";
-import type { CompanyStatus, CompanySource, EmailStatus } from "@/lib/types";
+import type { CompanyStatus, CompanySource, EmailStatus, TemplateCategory, DocumentCategory } from "@/lib/types";
 import type { ActivityType as DbActivityType } from "@prisma/client";
 
 /* ─────────────────────────────────────────────────────────────
@@ -311,5 +313,203 @@ export async function logEmail(_prev: LogEmailState, formData: FormData): Promis
   revalidatePath("/companies");
   revalidatePath("/dashboard");
   revalidatePath("/activity");
+  return { ok: true };
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Document upload
+   ───────────────────────────────────────────────────────────── */
+
+const uploadDocumentSchema = z.object({
+  name: z.string().min(1, "Document name is required"),
+  category: z.string().min(1, "Category is required"),
+  version: z.string().min(1, "Version is required"),
+  tags: z.string().optional(),
+  scope: z.enum(["Team", "Private"]).default("Team"),
+});
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getFileType(mime: string): string {
+  if (mime.includes("pdf")) return "pdf";
+  if (mime.includes("spreadsheet") || mime.includes("excel") || mime.includes("xlsx")) return "xlsx";
+  if (mime.includes("presentation") || mime.includes("powerpoint") || mime.includes("pptx")) return "pptx";
+  if (mime.includes("word") || mime.includes("document") || mime.includes("docx")) return "docx";
+  if (mime.includes("image")) return "image";
+  return "pdf";
+}
+
+export type UploadDocumentState = { error?: string; ok?: boolean } | undefined;
+
+export async function uploadDocument(_prev: UploadDocumentState, formData: FormData): Promise<UploadDocumentState> {
+  const me = await requireUser();
+
+  const parsed = uploadDocumentSchema.safeParse({
+    name: formData.get("name"),
+    category: formData.get("category"),
+    version: formData.get("version"),
+    tags: formData.get("tags"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid document details" };
+  }
+  const { name, category, version, tags } = parsed.data;
+  const scope = parsed.data.scope === "Private" ? "Private" as const : "Team" as const;
+
+  const file = formData.get("file") as File | null;
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return { error: "Please select a file to upload." };
+  }
+
+  const maxSize = 50 * 1024 * 1024;
+  if (file.size > maxSize) {
+    return { error: "File is too large. Maximum size is 50 MB." };
+  }
+
+  const fileName = file.name;
+  const safeName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+  const uploadsDir = join(process.cwd(), "public", "uploads");
+  await mkdir(uploadsDir, { recursive: true });
+  const filePath = join(uploadsDir, safeName);
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  await writeFile(filePath, buffer);
+
+  const fileType = getFileType(file.type);
+  const tagList = tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
+
+  const doc = await prisma.documentItem.create({
+    data: {
+      name,
+      category: documentCategoryToDb(category as DocumentCategory),
+      size: formatBytes(file.size),
+      type: fileType,
+      version,
+      tags: tagList,
+      url: `/uploads/${safeName}`,
+      uploadedById: me.id,
+      scope: scopeToDb(scope),
+    },
+  });
+
+  await prisma.activity.create({
+    data: {
+      type: "DOCUMENT_UPLOADED" as DbActivityType,
+      actorId: me.id,
+      companyId: null,
+      message: `uploaded document "${doc.name}"`,
+      meta: { category, version, size: formatBytes(file.size) },
+    },
+  });
+
+  revalidatePath("/documents");
+  revalidatePath("/dashboard");
+  revalidatePath("/activity");
+  return { ok: true };
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Email template management
+   ───────────────────────────────────────────────────────────── */
+
+const createTemplateSchema = z.object({
+  name: z.string().min(1, "Template name is required"),
+  category: z.string().min(1, "Category is required"),
+  subject: z.string().min(1, "Subject is required"),
+  body: z.string().min(1, "Body is required"),
+});
+
+export type CreateTemplateState = { error?: string; ok?: boolean } | undefined;
+
+export async function createTemplate(_prev: CreateTemplateState, formData: FormData): Promise<CreateTemplateState> {
+  await requireUser();
+
+  const parsed = createTemplateSchema.safeParse({
+    name: formData.get("name"),
+    category: formData.get("category"),
+    subject: formData.get("subject"),
+    body: formData.get("body"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid template details" };
+  }
+  const { name, category, subject, body } = parsed.data;
+
+  const variableRegex = /\{\{(\w+)\}\}/g;
+  const variables: string[] = [];
+  let match;
+  while ((match = variableRegex.exec(body)) !== null) {
+    if (!variables.includes(match[1])) variables.push(match[1]);
+  }
+
+  await prisma.emailTemplate.create({
+    data: {
+      name,
+      category: templateCategoryToDb(category as TemplateCategory),
+      subject,
+      body,
+      variables,
+      usageCount: 0,
+    },
+  });
+
+  revalidatePath("/templates");
+  return { ok: true };
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Profile & workspace updates
+   ───────────────────────────────────────────────────────────── */
+
+const updateProfileSchema = z.object({
+  name: z.string().min(2, "Name is required"),
+  title: z.string().optional(),
+});
+
+export type UpdateProfileState = { error?: string; ok?: boolean } | undefined;
+
+export async function updateProfile(_prev: UpdateProfileState, formData: FormData): Promise<UpdateProfileState> {
+  const me = await requireUser();
+  const parsed = updateProfileSchema.safeParse({
+    name: formData.get("name"),
+    title: formData.get("title"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid details" };
+  }
+  const { name, title } = parsed.data;
+
+  await prisma.user.update({
+    where: { id: me.id },
+    data: { name, title: title || null },
+  });
+
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
+export type UpdateWorkspaceState = { error?: string; ok?: boolean } | undefined;
+
+export async function updateWorkspace(_prev: UpdateWorkspaceState, formData: FormData): Promise<UpdateWorkspaceState> {
+  await requireAdmin();
+  const name = formData.get("name") as string;
+  if (!name || name.trim().length < 2) {
+    return { error: "Workspace name must be at least 2 characters" };
+  }
+
+  const existing = await prisma.workspaceMeta.findFirst();
+  if (existing) {
+    await prisma.workspaceMeta.update({ where: { id: existing.id }, data: { name: name.trim() } });
+  } else {
+    await prisma.workspaceMeta.create({
+      data: { name: name.trim(), website: "", adminEmail: "", initialized: true },
+    });
+  }
+
+  revalidatePath("/settings");
   return { ok: true };
 }

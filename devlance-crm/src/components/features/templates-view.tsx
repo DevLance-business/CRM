@@ -1,18 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useActionState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Plus, Search, Tag, Copy, Play } from "lucide-react";
+import { Mail, Plus, Search, Tag, Copy, Play, Loader2 } from "lucide-react";
 import type { EmailTemplate, TemplateCategory } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { Input, Field, Textarea } from "@/components/ui/input";
+import { Input, Field, Textarea, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Modal } from "@/components/ui/overlay";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { createTemplate, type CreateTemplateState } from "@/app/actions/crm";
 
 const categories: (TemplateCategory | "All")[] = [
   "All",
@@ -178,6 +179,10 @@ function PreviewModal({ template, onClose }: { template: EmailTemplate | null; o
 }
 
 function EditTemplateModal({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void }) {
+  const [state, formAction, pending] = useActionState<CreateTemplateState, FormData>(createTemplate, undefined);
+
+  if (!open && state?.ok) setOpen(false);
+
   return (
     <Modal open={open} onClose={() => setOpen(false)} size="max-w-lg" label="New template">
       <div className="flex items-center gap-3 mb-5">
@@ -194,30 +199,39 @@ function EditTemplateModal({ open, setOpen }: { open: boolean; setOpen: (v: bool
         </div>
       </div>
 
-      <form
-        className="space-y-3.5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          toast.success("Template created");
-          setOpen(false);
-        }}
-      >
+      <form action={formAction} className="space-y-3.5">
         <div className="grid grid-cols-2 gap-3.5">
           <Field label="Template name" className="col-span-2">
-            <Input placeholder="Cold Intro — Product Engineering" />
+            <Input name="name" required placeholder="Cold Intro — Product Engineering" />
           </Field>
           <Field label="Category">
-            <Input placeholder="Cold Outreach" />
+            <Select name="category" defaultValue="Cold Outreach">
+              <option>Cold Outreach</option>
+              <option>Follow-up</option>
+              <option>Meeting Request</option>
+              <option>Proposal</option>
+              <option>Thank You</option>
+              <option>LinkedIn Message</option>
+            </Select>
           </Field>
           <Field label="Subject">
-            <Input placeholder="Helping {{company_name}} ship faster" />
+            <Input name="subject" required placeholder="Helping {{company_name}} ship faster" />
           </Field>
         </div>
         <Field label="Body" hint="Variables: {{company_name}}, {{contact_name}}, {{sender_name}}, {{service}}, {{website}}">
-          <Textarea rows={7} placeholder={"Hi {{contact_name}},\n\nI came across {{company_name}}…"} />
+          <Textarea name="body" required rows={7} placeholder={"Hi {{contact_name}},\n\nI came across {{company_name}}…"} />
         </Field>
+
+        {state?.error && (
+          <p className="rounded-[10px] border border-rose-200/70 bg-rose-50 px-3 py-2 text-[12.5px] font-medium text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/[0.08] dark:text-rose-300">
+            {state.error}
+          </p>
+        )}
+
         <div className="flex gap-2 pt-1">
-          <Button type="submit" className="flex-1">Create template</Button>
+          <Button type="submit" className="flex-1" disabled={pending}>
+            {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</> : "Create template"}
+          </Button>
           <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
         </div>
       </form>

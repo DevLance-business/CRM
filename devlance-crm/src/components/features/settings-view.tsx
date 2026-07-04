@@ -17,7 +17,11 @@ import { Avatar } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Modal } from "@/components/ui/overlay";
 import { toast } from "sonner";
-import { createTeamMember, type CreateMemberState } from "@/app/actions/crm";
+import {
+  createTeamMember, type CreateMemberState,
+  updateProfile, type UpdateProfileState,
+  updateWorkspace, type UpdateWorkspaceState,
+} from "@/app/actions/crm";
 
 const settingsTabs = [
   { value: "profile", label: "Profile" },
@@ -48,21 +52,8 @@ export function SettingsView({ members, currentUserId, workspaceName }: { member
               <CardTitle>Profile</CardTitle>
               <CardDescription>How you appear across DevLance CRM.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Avatar name={user.name} color={user.avatarColor} online={user.online} size="lg" />
-                <Button variant="secondary" size="sm">Change avatar</Button>
-              </div>
-              <div className="grid grid-cols-2 gap-3.5">
-                <Field label="Full name"><Input defaultValue={user.name} /></Field>
-                <Field label="Title"><Input defaultValue={user.title} /></Field>
-                <Field label="Email"><Input defaultValue={user.email} /></Field>
-                <Field label="Role"><Select defaultValue={user.role} disabled><option>Admin</option><option>Sales</option><option>Team Member</option></Select></Field>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={() => toast.success("Profile saved")}>Save changes</Button>
-                <Button variant="secondary" onClick={() => toast("No changes made")}>Cancel</Button>
-              </div>
+            <CardContent>
+              <ProfileForm user={user} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -128,24 +119,8 @@ export function SettingsView({ members, currentUserId, workspaceName }: { member
               <CardTitle>Workspace</CardTitle>
               <CardDescription>Branding and defaults for DevLance HQ.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-3.5">
-                <Field label="Workspace name"><Input defaultValue={workspaceName} /></Field>
-                <Field label="Default language">
-                  <Select defaultValue="en"><option value="en">English</option><option value="de">Deutsch</option></Select>
-                </Field>
-              </div>
-              <div>
-                <p className="mb-2 text-[13px] font-semibold">Accent theme</p>
-                <div className="flex gap-2">
-                  {["#2563eb", "#22d3ee", "#8b5cf6", "#16a34a"].map((c, i) => (
-                    <button key={c} className={cn("h-10 w-10 rounded-[12px] border-2 transition-all", i === 0 ? "border-[var(--color-foreground)] scale-105" : "border-transparent")} style={{ background: c }}>
-                      {i === 0 && <Check className="h-4 w-4 text-white mx-auto" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <Button onClick={() => toast.success("Workspace updated")}>Save workspace</Button>
+            <CardContent>
+              <WorkspaceForm workspaceName={workspaceName} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -168,6 +143,92 @@ function NotifRow({ label, description, defaultChecked }: { label: string; descr
         <motion.span layout className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all", on ? "left-[22px]" : "left-0.5")} />
       </button>
     </div>
+  );
+}
+
+function ProfileForm({ user }: { user: UserType }) {
+  const [state, formAction, pending] = useActionState<UpdateProfileState, FormData>(updateProfile, undefined);
+
+  return (
+    <form action={formAction} className="space-y-4">
+      <div className="flex items-center gap-4">
+        <Avatar name={user.name} color={user.avatarColor} online={user.online} size="lg" />
+      </div>
+      <div className="grid grid-cols-2 gap-3.5">
+        <Field label="Full name">
+          <Input name="name" defaultValue={user.name} required />
+        </Field>
+        <Field label="Title">
+          <Input name="title" defaultValue={user.title} />
+        </Field>
+        <Field label="Email">
+          <Input defaultValue={user.email} disabled />
+        </Field>
+        <Field label="Role">
+          <Select defaultValue={user.role} disabled>
+            <option>Admin</option><option>Sales</option><option>Team Member</option>
+          </Select>
+        </Field>
+      </div>
+      {state?.ok && (
+        <p className="rounded-[10px] border border-emerald-200/70 bg-emerald-50 px-3 py-2 text-[12.5px] font-medium text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/[0.08] dark:text-emerald-300">
+          Profile updated.
+        </p>
+      )}
+      {state?.error && (
+        <p className="rounded-[10px] border border-rose-200/70 bg-rose-50 px-3 py-2 text-[12.5px] font-medium text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/[0.08] dark:text-rose-300">
+          {state.error}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <Button type="submit" disabled={pending}>
+          {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Save changes"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function WorkspaceForm({ workspaceName }: { workspaceName: string }) {
+  const [state, formAction, pending] = useActionState<UpdateWorkspaceState, FormData>(updateWorkspace, undefined);
+
+  return (
+    <form action={formAction} className="space-y-4">
+      <div className="grid grid-cols-2 gap-3.5">
+        <Field label="Workspace name">
+          <Input name="name" defaultValue={workspaceName} required />
+        </Field>
+        <Field label="Default language">
+          <Select defaultValue="en">
+            <option value="en">English</option>
+            <option value="de">Deutsch</option>
+          </Select>
+        </Field>
+      </div>
+      <div>
+        <p className="mb-2 text-[13px] font-semibold">Accent theme</p>
+        <div className="flex gap-2">
+          {["#2563eb", "#22d3ee", "#8b5cf6", "#16a34a"].map((c, i) => (
+            <button key={c} type="button" className={cn("h-10 w-10 rounded-[12px] border-2 transition-all", i === 0 ? "border-[var(--color-foreground)] scale-105" : "border-transparent")} style={{ background: c }}>
+              {i === 0 && <Check className="h-4 w-4 text-white mx-auto" />}
+            </button>
+          ))}
+        </div>
+      </div>
+      {state?.ok && (
+        <p className="rounded-[10px] border border-emerald-200/70 bg-emerald-50 px-3 py-2 text-[12.5px] font-medium text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/[0.08] dark:text-emerald-300">
+          Workspace updated.
+        </p>
+      )}
+      {state?.error && (
+        <p className="rounded-[10px] border border-rose-200/70 bg-rose-50 px-3 py-2 text-[12.5px] font-medium text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/[0.08] dark:text-rose-300">
+          {state.error}
+        </p>
+      )}
+      <Button type="submit" disabled={pending}>
+        {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Save workspace"}
+      </Button>
+    </form>
   );
 }
 

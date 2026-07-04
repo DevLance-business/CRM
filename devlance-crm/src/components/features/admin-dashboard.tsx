@@ -31,14 +31,14 @@ interface Props {
 export function AdminDashboard({ stats, activities, companies, teamStats, adminName }: Props) {
   const { setQuickAddOpen } = useUIStore();
   const kpis = [
-    { label: "Total Companies", value: stats.totalCompanies, icon: Building2, accent: "blue" as const, delta: { value: "12%", positive: true } },
-    { label: "Companies Assigned", value: stats.companiesAssigned, icon: Users2, accent: "violet" as const, delta: { value: "8%", positive: true } },
-    { label: "Emails Sent Today", value: stats.emailsSentToday, icon: Send, accent: "cyan" as const, delta: { value: "23%", positive: true } },
-    { label: "Replies Received", value: stats.repliesReceived, icon: MailCheck, accent: "green" as const, delta: { value: "4%", positive: true } },
-    { label: "Follow-ups Due", value: stats.followUpsDue, icon: Clock3, accent: "amber" as const, delta: { value: "2", positive: false } },
-    { label: "Meetings Scheduled", value: stats.meetingsScheduled, icon: CalendarCheck2, accent: "violet" as const, delta: { value: "1", positive: true } },
-    { label: "Active Outreach", value: stats.activeOutreach, icon: Repeat2, accent: "cyan" as const, delta: { value: "3", positive: true } },
-    { label: "Response Rate", value: `${stats.responseRate}%`, icon: TrendingUp, accent: "blue" as const, delta: { value: "5%", positive: true } },
+    { label: "Total Companies", value: stats.totalCompanies, icon: Building2, accent: "blue" as const },
+    { label: "Companies Assigned", value: stats.companiesAssigned, icon: Users2, accent: "violet" as const },
+    { label: "Emails Sent Today", value: stats.emailsSentToday, icon: Send, accent: "cyan" as const },
+    { label: "Replies Received", value: stats.repliesReceived, icon: MailCheck, accent: "green" as const },
+    { label: "Follow-ups Due", value: stats.followUpsDue, icon: Clock3, accent: "amber" as const },
+    { label: "Meetings Scheduled", value: stats.meetingsScheduled, icon: CalendarCheck2, accent: "violet" as const },
+    { label: "Active Outreach", value: stats.activeOutreach, icon: Repeat2, accent: "cyan" as const },
+    { label: "Response Rate", value: `${stats.responseRate}%`, icon: TrendingUp, accent: "blue" as const },
   ];
 
   const upcoming = companies
@@ -68,7 +68,6 @@ export function AdminDashboard({ stats, activities, companies, teamStats, adminN
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary"><CalendarClock className="h-4 w-4" /> This week</Button>
           <Button onClick={() => setQuickAddOpen(true)}><Plus className="h-4 w-4" /> Add Company</Button>
         </div>
       </div>

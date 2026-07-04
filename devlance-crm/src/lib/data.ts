@@ -11,6 +11,7 @@ import type {
   TemplateCategory as DbTemplateCategory,
   DocumentCategory as DbDocumentCategory,
   Role as DbRole,
+  Visibility as DbVisibility,
 } from "@prisma/client";
 
 /* ─────────────────────────────────────────────────────────────
@@ -69,6 +70,9 @@ export const roleFromDb = (r: DbRole): Role =>
 
 export const roleToDb = (r: Role): DbRole =>
   (r === "Admin" ? "ADMIN" : r === "Sales" ? "SALES" : "TEAM_MEMBER") as DbRole;
+
+export const scopeToDb = (s: "Team" | "Private"): DbVisibility =>
+  s === "Private" ? "PRIVATE" : "TEAM";
 
 /* ─────────────────────────────────────────────────────────────
    Mappers: DB row → UI shape
@@ -174,6 +178,7 @@ export function mapDocument(d: NonNullable<DbDoc>): DocumentItem {
     version: d.version,
     tags: d.tags,
     url: d.url,
+    scope: d.scope === "PRIVATE" ? "Private" : "Team",
   };
 }
 
@@ -253,8 +258,17 @@ export async function getEmailTemplates(): Promise<EmailTemplate[]> {
 }
 
 export async function getDocuments(): Promise<DocumentItem[]> {
-  await requireUser();
-  const rows = await prisma.documentItem.findMany({ orderBy: { uploadedAt: "desc" } });
+  const me = await requireUser();
+  // Team-scoped docs visible to everyone. Private docs visible only to uploader.
+  const rows = await prisma.documentItem.findMany({
+    where: {
+      OR: [
+        { scope: "TEAM" },
+        { uploadedById: me.id },
+      ],
+    },
+    orderBy: { uploadedAt: "desc" },
+  });
   return rows.map(mapDocument);
 }
 

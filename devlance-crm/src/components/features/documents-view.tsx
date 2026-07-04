@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useActionState, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   FileText, Plus, Search, Upload,
   FileSpreadsheet, Presentation, FileType,
-  Image as ImageIcon, Tag, CloudUpload, X,
+  Image as ImageIcon, Tag, CloudUpload, X, Loader2,
 } from "lucide-react";
 import type { DocumentCategory, DocumentItem, User } from "@/lib/types";
+import { useAuthStore } from "@/lib/store";
 import { cn, formatDate } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { EmptyState } from "@/components/ui/states";
 import { Avatar } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { uploadDocument, type UploadDocumentState } from "@/app/actions/crm";
 
 const categories: (DocumentCategory | "All")[] = [
   "All", "Company Profile", "Portfolio", "Pricing Sheet", "Case Studies",
@@ -89,7 +91,10 @@ export function DocumentsView({ documents, users }: { documents: DocumentItem[];
                   <CardContent className="p-5 flex flex-col h-full">
                     <div className="flex items-start justify-between gap-2">
                       <div className={cn("grid h-12 w-12 place-items-center rounded-[14px]", typeColor(d.type))}><Icon className="h-6 w-6" /></div>
-                      <Badge variant="outline">{d.version}</Badge>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge variant="outline">{d.version}</Badge>
+                        {d.scope === "Private" && <Badge variant="amber" dot>Private</Badge>}
+                      </div>
                     </div>
                     <h3 className="mt-3 font-display text-[14.5px] font-bold leading-tight line-clamp-2">{d.name}</h3>
                     <p className="mt-1 text-[11.5px] text-[var(--color-muted-foreground)]">{d.category} · {d.size}</p>
@@ -115,6 +120,14 @@ export function DocumentsView({ documents, users }: { documents: DocumentItem[];
 
 function UploadModal({ open, setOpen, categories }: { open: boolean; setOpen: (v: boolean) => void; categories: (DocumentCategory | "All")[] }) {
   const [drag, setDrag] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [fileName, setFileName] = useState("");
+  const [state, formAction, pending] = useActionState<UploadDocumentState, FormData>(uploadDocument, undefined);
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === "Admin";
+
+  if (!open && state?.ok) setOpen(false);
+
   return (
     <Modal open={open} onClose={() => setOpen(false)} size="max-w-lg" label="Upload document">
       <div className="flex items-center gap-3 mb-5">
@@ -124,21 +137,55 @@ function UploadModal({ open, setOpen, categories }: { open: boolean; setOpen: (v
           <p className="text-sm text-[var(--color-muted-foreground)]">PDF, DOCX, XLSX, PPTX or images up to 50 MB.</p>
         </div>
       </div>
-      <div onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); toast.success("Files queued"); }} className={cn("rounded-[16px] border-2 border-dashed p-8 text-center transition-colors", drag ? "border-blue-400 bg-blue-50/50 dark:bg-blue-500/[0.08]" : "border-[var(--color-border-subtle)] bg-white/30 dark:bg-white/[0.03]")}>
-        <div className="mx-auto grid h-14 w-14 place-items-center rounded-[18px] bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300"><CloudUpload className="h-7 w-7" /></div>
-        <p className="mt-3 font-display font-bold text-[15px]">Drag & drop files here</p>
-        <p className="text-[12px] text-[var(--color-muted-foreground)] mt-1">or browse from your device</p>
-        <label className="mt-4 inline-flex"><span className="inline-flex items-center gap-2 rounded-[12px] bg-brand-gradient px-4 py-2 text-[13px] font-semibold text-white cursor-pointer"><Plus className="h-4 w-4" /> Browse files</span><input type="file" multiple className="hidden" onChange={() => toast.success("Files selected")} /></label>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-3.5">
-        <Field label="Category"><Select>{categories.slice(1).map((c) => <option key={c}>{c}</option>)}</Select></Field>
-        <Field label="Version label"><Input placeholder="v1.0" /></Field>
-        <Field label="Tags" className="col-span-2"><Input placeholder="pitch, overview, case-study" /></Field>
-      </div>
-      <div className="mt-5 flex gap-2">
-        <Button className="flex-1" onClick={() => { toast.success("Document uploaded"); setOpen(false); }}><Upload className="h-4 w-4" /> Upload</Button>
-        <Button variant="secondary" onClick={() => setOpen(false)}><X className="h-4 w-4" /> Cancel</Button>
-      </div>
+
+      <form action={formAction}>
+        <div onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); if (e.dataTransfer.files[0]) { const dt = new DataTransfer(); dt.items.add(e.dataTransfer.files[0]); if (fileRef.current) { fileRef.current.files = dt.files; setFileName(e.dataTransfer.files[0]!.name); } }; }} className={cn("rounded-[16px] border-2 border-dashed p-8 text-center transition-colors", drag ? "border-blue-400 bg-blue-50/50 dark:bg-blue-500/[0.08]" : "border-[var(--color-border-subtle)] bg-white/30 dark:bg-white/[0.03]")}>
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-[18px] bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300"><CloudUpload className="h-7 w-7" /></div>
+          <p className="mt-3 font-display font-bold text-[15px]">
+            {fileName ? fileName : "Drag & drop files here"}
+          </p>
+          <p className="text-[12px] text-[var(--color-muted-foreground)] mt-1">or browse from your device</p>
+          <label className="mt-4 inline-flex"><span className="inline-flex items-center gap-2 rounded-[12px] bg-brand-gradient px-4 py-2 text-[13px] font-semibold text-white cursor-pointer"><Plus className="h-4 w-4" /> Browse files</span><input ref={fileRef} name="file" type="file" multiple={false} className="hidden" onChange={(e) => { if (e.target.files?.[0]) setFileName(e.target.files[0].name); }} /></label>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3.5">
+          <Field label="Document name" className="col-span-2">
+            <Input name="name" required placeholder="Company Profile — DevLance 2026" />
+          </Field>
+          <Field label="Category">
+            <Select name="category" defaultValue="Company Profile">
+              {categories.slice(1).map((c) => <option key={c}>{c}</option>)}
+            </Select>
+          </Field>
+          <Field label="Version label">
+            <Input name="version" defaultValue="v1.0" placeholder="v1.0" />
+          </Field>
+          <Field label="Tags" className="col-span-2">
+            <Input name="tags" placeholder="pitch, overview, case-study" />
+          </Field>
+          {isAdmin && (
+            <Field label="Visibility" className="col-span-2">
+              <Select name="scope" defaultValue="Team">
+                <option value="Team">Team — visible to everyone</option>
+                <option value="Private">Private — only visible to me</option>
+              </Select>
+            </Field>
+          )}
+        </div>
+
+        {state?.error && (
+          <p className="mt-3 rounded-[10px] border border-rose-200/70 bg-rose-50 px-3 py-2 text-[12.5px] font-medium text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/[0.08] dark:text-rose-300">
+            {state.error}
+          </p>
+        )}
+
+        <div className="mt-5 flex gap-2">
+          <Button type="submit" className="flex-1" disabled={pending}>
+            {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading…</> : <><Upload className="h-4 w-4" /> Upload</>}
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => setOpen(false)}><X className="h-4 w-4" /> Cancel</Button>
+        </div>
+      </form>
     </Modal>
   );
 }

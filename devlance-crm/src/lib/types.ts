@@ -110,6 +110,7 @@ export interface DocumentItem {
   version: string;
   tags: string[];
   url: string;
+  scope: "Team" | "Private";
 }
 
 export type ActivityType =
