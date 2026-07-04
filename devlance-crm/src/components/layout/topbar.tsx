@@ -5,7 +5,6 @@ import { useTheme } from "next-themes";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSyncExternalStore } from "react";
 import { useUIStore, useAuthStore } from "@/lib/store";
-import { Avatar } from "@/components/ui/avatar";
 import { cn, relativeTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -88,11 +87,6 @@ export function TopBar() {
             )}
           </button>
 
-          {/* User */}
-          <button className="flex items-center gap-2 rounded-[12px] border border-[var(--color-border-subtle)] bg-white/40 dark:bg-white/5 p-1 pr-2 hover:bg-black/[0.04] dark:hover:bg-white/10 transition-colors">
-            <Avatar name={user.name} color={user.avatarColor} online={user.online} size="sm" />
-            <span className="hidden xl:inline text-[13px] font-bold pr-1">{user.name.split(" ")[0]}</span>
-          </button>
         </div>
       </div>
 

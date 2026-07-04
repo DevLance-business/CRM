@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -10,7 +11,6 @@ import {
   LogOut,
   Plus,
   Settings as SettingsIcon,
-  Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 import { navItems } from "@/lib/navigation";
@@ -46,9 +46,13 @@ export function Sidebar() {
       >
         {/* Brand */}
         <div className={cn("flex items-center gap-2.5 px-1.5 mb-6", sidebarCollapsed && "justify-center px-0")}>
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-brand-gradient shadow-[0_8px_18px_-6px_rgba(37,99,235,0.6)]">
-            <Sparkles className="h-5 w-5 text-white" strokeWidth={2.4} />
-          </div>
+          <Image
+            src="/devlancelogo.jpeg"
+            alt="DevLance"
+            width={40}
+            height={40}
+            className="h-10 w-10 shrink-0 rounded-[12px]"
+          />
           {!sidebarCollapsed && (
             <div className="leading-tight">
               <p className="font-display text-[15px] font-extrabold tracking-tight">DevLance</p>
@@ -113,21 +117,6 @@ export function Sidebar() {
             );
           })}
         </nav>
-
-        {/* Upgrade card */}
-        {!sidebarCollapsed && (
-          <div className="mt-4 rounded-[16px] bg-brand-gradient p-4 text-white overflow-hidden relative">
-            <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/20 blur-xl" />
-            <Sparkles className="h-5 w-5 mb-2" />
-            <p className="text-[13px] font-bold leading-tight">Supercharge outreach</p>
-            <p className="text-[11px] text-white/80 mt-1 leading-snug">
-              AI-assisted sequencing for Pro teams.
-            </p>
-            <div className="mt-3 rounded-[10px] bg-white/20 px-2.5 py-1.5 text-[12px] font-semibold inline-flex items-center gap-1">
-              Explore <ChevronsRight className="h-3.5 w-3.5" />
-            </div>
-          </div>
-        )}
 
         {/* Profile */}
         <div className="relative mt-3">
@@ -239,9 +228,13 @@ function MobileNav() {
             className="absolute top-0 left-0 bottom-0 w-72 glass !rounded-none p-4 flex flex-col"
           >
             <div className="flex items-center gap-2.5 mb-6">
-              <div className="grid h-10 w-10 place-items-center rounded-[12px] bg-brand-gradient">
-                <Sparkles className="h-5 w-5 text-white" />
-              </div>
+              <Image
+                src="/devlancelogo.jpeg"
+                alt="DevLance"
+                width={40}
+                height={40}
+                className="h-10 w-10 rounded-[12px]"
+              />
               <div>
                 <p className="font-display text-[15px] font-extrabold">DevLance</p>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
